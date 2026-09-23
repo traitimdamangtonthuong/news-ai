@@ -1,0 +1,4 @@
+name: News AI Local
+values:
+  - key: baseUrl
+    value: ''

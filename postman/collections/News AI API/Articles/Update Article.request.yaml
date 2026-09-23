@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/articles"
+method: PUT
+order: 4082129808787699

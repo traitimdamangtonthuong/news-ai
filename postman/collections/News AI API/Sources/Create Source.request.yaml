@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/sources"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{\r
+
+    \  \"name\": \"Test RSS\",\r
+
+    \  \"baseUrl\": \"https://example.com\",\r
+
+    \  \"rssUrl\": \"http://localhost:8090/feed.xml\"\r
+
+    }"
+order: 1788839003308

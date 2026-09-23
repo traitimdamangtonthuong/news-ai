@@ -1,0 +1,31 @@
+$kind: http-request
+url: "{{baseUrl}}/api/articles"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{\r
+
+    \    \"title\": \"\",\r
+
+    \    \"description\": \"Testing\",\r
+
+    \    \"content\": \"Something\",\r
+
+    \    \"url\": \"not-a-url\",\r
+
+    \    \"source\": {\r
+
+    \        \"id\": 1\r
+
+    \    },\r
+
+    \    \"category\": {\r
+
+    \        \"id\": 1\r
+
+    \    }\r
+
+    }"
+order: 1124480796125877

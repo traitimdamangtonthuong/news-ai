@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/articles/search?keyword=AI"
+method: GET
+order: 4221968952000001
