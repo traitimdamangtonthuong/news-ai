@@ -110,12 +110,12 @@ and auto-configuration.
 
 ## 3.3 Dependencies Declared in `pom.xml`
 
-| Dependency                              | Purpose                                      | Scope   |
-| --------------------------------------- | -------------------------------------------- | ------- |
-| `spring-boot-starter-webmvc`            | REST controllers / Web MVC                   | compile |
-| `spring-boot-starter-data-jpa`          | JPA + Hibernate persistence                  | compile |
-| `org.postgresql:postgresql`             | PostgreSQL JDBC driver                       | runtime |
-| `spring-boot-starter-webmvc-test`       | Testing utilities                            | test    |
+| Dependency                          | Purpose                     | Scope   |
+| ----------------------------------- | --------------------------- | ------- |
+| `spring-boot-starter-webmvc`      | REST controllers / Web MVC  | compile |
+| `spring-boot-starter-data-jpa`    | JPA + Hibernate persistence | compile |
+| `org.postgresql:postgresql`       | PostgreSQL JDBC driver      | runtime |
+| `spring-boot-starter-webmvc-test` | Testing utilities           | test    |
 
 The project uses the modern **WebMVC** starter naming (not the older
 `spring-boot-starter-web`).
@@ -157,11 +157,11 @@ The source file contains Vietnamese comments explaining this startup flow.
 A simple sanity controller in a separate `controller` package, separate from
 the article feature package:
 
-| Method | Mapping        | Returns                                     |
-| ------ | -------------- | ------------------------------------------- |
-| GET    | `/hello`       | `"Xin Chao Quy Phuoc!"` (plain text)        |
-| GET    | `/about`       | `"Toi la HQP!"` (plain text)                |
-| GET    | `/api/status`  | JSON: `{ "application": "News AI", "status": "running", "version": 1 }` |
+| Method | Mapping         | Returns                                                                  |
+| ------ | --------------- | ------------------------------------------------------------------------ |
+| GET    | `/hello`      | `"Xin Chao Quy Phuoc!"` (plain text)                                   |
+| GET    | `/about`      | `"Toi la HQP!"` (plain text)                                           |
+| GET    | `/api/status` | JSON:`{ "application": "News AI", "status": "running", "version": 1 }` |
 
 It is used to verify that the server is running during early development.
 
@@ -197,17 +197,17 @@ Mapped to the PostgreSQL table `articles`.
 
 ## 7.1 Fields
 
-| Field         | Java type       | JPA mapping                                            |
-| ------------- | --------------- | ------------------------------------------------------ |
+| Field           | Java type         | JPA mapping                                                 |
+| --------------- | ----------------- | ----------------------------------------------------------- |
 | `id`          | `Long`          | `@Id @GeneratedValue(strategy = GenerationType.IDENTITY)` |
-| `title`       | `String`        | `@Column(nullable = false)`                            |
-| `description` | `String`        | `@Column(columnDefinition = "TEXT")`                   |
-| `content`     | `String`        | `@Column(columnDefinition = "TEXT")`                   |
-| `source`      | `String`        | plain `String` (no constraint)                         |
-| `url`         | `String`        | `@Column(length = 2048)`                               |
-| `imageUrl`    | `String`        | `@Column(length = 2048)`                               |
-| `publishedAt` | `LocalDateTime` | plain column                                           |
-| `crawledAt`   | `LocalDateTime` | plain column                                           |
+| `title`       | `String`        | `@Column(nullable = false)`                               |
+| `description` | `String`        | `@Column(columnDefinition = "TEXT")`                      |
+| `content`     | `String`        | `@Column(columnDefinition = "TEXT")`                      |
+| `source`      | `String`        | plain`String` (no constraint)                             |
+| `url`         | `String`        | `@Column(length = 2048)`                                  |
+| `imageUrl`    | `String`        | `@Column(length = 2048)`                                  |
+| `publishedAt` | `LocalDateTime` | plain column                                                |
+| `crawledAt`   | `LocalDateTime` | plain column                                                |
 
 Notable facts:
 
@@ -253,13 +253,13 @@ private final ArticleRepository articleRepository;
 
 Behaviors implemented today:
 
-| Method                              | Behavior                                                                 |
-| ----------------------------------- | ------------------------------------------------------------------------ |
-| `getAllArticles()`                  | `articleRepository.findAll()` → returns all articles                     |
-| `getArticleById(Long id)`           | `findById(id).orElse(null)` — returns `null` when the article does not exist |
-| `addArticle(Article article)`       | forces `id = null`, sets `crawledAt = LocalDateTime.now()`, then saves   |
-| `updateArticle(id, updatedArticle)` | loads by id; returns `null` if not found; otherwise copies all fields (except `id` and `crawledAt`) and saves |
-| `deleteArticle(Long id)`            | returns `false` if not exists; otherwise deletes and returns `true`      |
+| Method                                | Behavior                                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `getAllArticles()`                  | `articleRepository.findAll()` → returns all articles                                                            |
+| `getArticleById(Long id)`           | `findById(id).orElse(null)` — returns `null` when the article does not exist                                  |
+| `addArticle(Article article)`       | forces`id = null`, sets `crawledAt = LocalDateTime.now()`, then saves                                          |
+| `updateArticle(id, updatedArticle)` | loads by id; returns`null` if not found; otherwise copies all fields (except `id` and `crawledAt`) and saves |
+| `deleteArticle(Long id)`            | returns`false` if not exists; otherwise deletes and returns `true`                                             |
 
 Notes:
 
@@ -277,13 +277,13 @@ Notes:
 public class ArticleController { ... }
 ```
 
-| Method | Endpoint                 | Action                                   | Success response                    |
-| ------ | ------------------------ | ---------------------------------------- | ------------------------------------- |
-| GET    | `/api/articles`          | list all articles                        | JSON array                          |
-| GET    | `/api/articles/{id}`     | get one article                          | JSON object (or empty `null` body if not found) |
-| POST   | `/api/articles`          | create an article                        | JSON object of saved article        |
-| PUT    | `/api/articles/{id}`     | update an article                        | JSON object (or empty `null` body if not found) |
-| DELETE | `/api/articles/{id}`     | delete an article                        | String message                      |
+| Method | Endpoint               | Action            | Success response                                 |
+| ------ | ---------------------- | ----------------- | ------------------------------------------------ |
+| GET    | `/api/articles`      | list all articles | JSON array                                       |
+| GET    | `/api/articles/{id}` | get one article   | JSON object (or empty`null` body if not found) |
+| POST   | `/api/articles`      | create an article | JSON object of saved article                     |
+| PUT    | `/api/articles/{id}` | update an article | JSON object (or empty`null` body if not found) |
+| DELETE | `/api/articles/{id}` | delete an article | String message                                   |
 
 Example JSON body for `POST /api/articles`:
 
@@ -334,15 +334,15 @@ spring.jpa.properties.hibernate.format_sql=true
 
 Facts to note (they differ from the older planning doc):
 
-| Setting              | Real value in the project          |
-| -------------------- | ---------------------------------- |
-| Database name        | `news_ai`                          |
-| Host                 | `localhost`                        |
-| **Port**             | **5728** (not 5432)                |
-| Username             | `postgres`                         |
-| Password             | read from env var `DB_PASSWORD`    |
-| DDL strategy         | `update` (Hibernate creates/updates the schema) |
-| SQL logging          | enabled (`show-sql` + `format_sql`) |
+| Setting        | Real value in the project                         |
+| -------------- | ------------------------------------------------- |
+| Database name  | `news_ai`                                       |
+| Host           | `localhost`                                     |
+| **Port** | **5728** (not 5432)                         |
+| Username       | `postgres`                                      |
+| Password       | read from env var`DB_PASSWORD`                  |
+| DDL strategy   | `update` (Hibernate creates/updates the schema) |
+| SQL logging    | enabled (`show-sql` + `format_sql`)           |
 
 Because `ddl-auto=update`, the `articles` table is expected to be created
 automatically from the `Article` entity when the application first connects.

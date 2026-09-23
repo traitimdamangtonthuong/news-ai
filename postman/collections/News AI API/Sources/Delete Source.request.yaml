@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/sources"
+method: DELETE
+order: 4437858590311971

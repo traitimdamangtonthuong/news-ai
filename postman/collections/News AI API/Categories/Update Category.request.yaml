@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{baseUrl}}/api/categories"
+method: PUT
+order: 3156457172355105

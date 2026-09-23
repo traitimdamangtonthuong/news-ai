@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/sources"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: "{\r
+
+    \    \"name\": \"VnExpress\",\r
+
+    \    \"baseUrl\": \"https://vnexpress.net\",\r
+
+    \    \"rssUrl\": \"https://vnexpress.net/rss/tin-moi-nhat.rss\"\r
+
+    }"
+order: 1788839003308
