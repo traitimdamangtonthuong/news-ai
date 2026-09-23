@@ -7,17 +7,13 @@ body:
   type: json
   content: "{\r
 
-    \    \"title\": \"AI Is Changing Software Development\",\r
+    \    \"title\": \"\",\r
 
-    \    \"description\": \"An overview of how AI is affecting software development.\",\r
+    \    \"description\": \"Testing\",\r
 
-    \    \"content\": \"Artificial intelligence is increasingly being used by software developers...\",\r
+    \    \"content\": \"Something\",\r
 
-    \    \"url\": \"https://example.com/ai-software-development\",\r
-
-    \    \"imageUrl\": \"https://example.com/images/ai.jpg\",\r
-
-    \    \"publishedAt\": \"2026-09-08T09:00:00\",\r
+    \    \"url\": \"not-a-url\",\r
 
     \    \"source\": {\r
 

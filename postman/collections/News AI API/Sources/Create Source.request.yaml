@@ -7,11 +7,11 @@ body:
   type: json
   content: "{\r
 
-    \    \"name\": \"VnExpress\",\r
+    \  \"name\": \"Test RSS\",\r
 
-    \    \"baseUrl\": \"https://vnexpress.net\",\r
+    \  \"baseUrl\": \"https://example.com\",\r
 
-    \    \"rssUrl\": \"https://vnexpress.net/rss/tin-moi-nhat.rss\"\r
+    \  \"rssUrl\": \"http://localhost:8090/feed.xml\"\r
 
     }"
 order: 1788839003308
