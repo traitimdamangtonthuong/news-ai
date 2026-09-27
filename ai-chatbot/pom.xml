@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Đây là dự án Maven ĐỘC LẬP cho AI Chatbot.
+    - KHÔNG phải module con của backend (news-ai/pom.xml).
+    - KHÔNG có dependency Spring Boot; chỉ dùng Java thuần + java.net.http (có sẵn
+      trong JDK) để gọi sang REST API của backend như một client bên ngoài.
+    - Build/chạy tách rời hoàn toàn: `cd ai-chatbot && mvn package` rồi
+      `java -jar target/ai-chatbot-0.1.0.jar`.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.newsai</groupId>
+    <artifactId>ai-chatbot</artifactId>
+    <version>0.1.0</version>
+    <packaging>jar</packaging>
+    <name>news-ai-ai-chatbot</name>
+    <description>Chatbot Java độc lập, tổng hợp bài báo từ backend news-ai qua REST API.</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- Chỉ dùng để parse/ghi JSON khi gọi REST API của backend. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>ai-chatbot-${project.version}</finalName>
+        <plugins>
+            <!-- Đóng gói kèm dependency để chạy bằng `java -jar` không cần classpath thủ công. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.7.1</version>
+                <configuration>
+                    <appendAssemblyId>false</appendAssemblyId>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.newsai.aichatbot.Main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
