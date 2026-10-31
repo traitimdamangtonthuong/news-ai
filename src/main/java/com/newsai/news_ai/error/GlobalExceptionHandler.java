@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleConflict(DataIntegrityViolationException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, "A record with the same unique value already exists.", request);
+        String msg = "A record with the same unique value already exists."; String cause = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ""; if (cause != null && cause.toLowerCase().contains("foreign key")) { msg = "Cannot delete or update resource because it is still referenced by other records."; } return build(HttpStatus.CONFLICT, msg, request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

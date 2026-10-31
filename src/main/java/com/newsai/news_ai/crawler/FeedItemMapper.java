@@ -7,6 +7,8 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
@@ -30,6 +32,9 @@ public class FeedItemMapper {
 
     private static final List<String> IMAGE_EXTENSIONS =
             List.of(".jpg", ".jpeg", ".png", ".gif", ".webp");
+
+    private static final Pattern HEX_ENTITY = Pattern.compile("&#x([0-9a-fA-F]+);");
+    private static final Pattern DEC_ENTITY = Pattern.compile("&#(\\d+);");
 
     public FeedParseResult parse(InputStream input, Source source) {
         SyndFeed feed;
@@ -66,7 +71,7 @@ public class FeedItemMapper {
 
             String description = entry.getDescription() == null
                     ? null
-                    : entry.getDescription().getValue();
+                    : stripHtml(entry.getDescription().getValue());
 
             String content = extractContent(entry);
 
@@ -91,6 +96,59 @@ public class FeedItemMapper {
         }
         String collapsed = value.replaceAll("\\s+", " ").trim();
         return collapsed.isEmpty() ? null : collapsed;
+    }
+
+    /**
+     * Cleans a feed-provided HTML description (VnExpress-style
+     * {@code <a href=...><img .../></a></br>Lead text...}) into plain text, so
+     * the stored description can be shown directly without rendering raw
+     * markup. Returns null when nothing but tags/whitespace remains (an
+     * image-only lead has no textual description).
+     */
+    private String stripHtml(String html) {
+        if (html == null) {
+            return null;
+        }
+        String withoutTags = html.replaceAll("<[^>]*>", " ");
+        String text = decodeEntities(withoutTags).replaceAll("\\s+", " ").trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    /**
+     * Decodes the HTML entities commonly found in feed HTML. Numeric
+     * references are handled generically; {@code &amp;} is decoded last so
+     * double-escaped sequences are not collapsed twice.
+     */
+    private String decodeEntities(String text) {
+        String decoded = decodeNumericEntities(text, HEX_ENTITY, 16);
+        decoded = decodeNumericEntities(decoded, DEC_ENTITY, 10);
+        return decoded
+                .replace("&nbsp;", " ")
+                .replace("&quot;", "\"")
+                .replace("&apos;", "'")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&hellip;", "…")
+                .replace("&ndash;", "-")
+                .replace("&mdash;", "-")
+                .replace("&amp;", "&");
+    }
+
+    private String decodeNumericEntities(String text, Pattern pattern, int radix) {
+        Matcher matcher = pattern.matcher(text);
+        StringBuffer buffer = new StringBuffer();
+        while (matcher.find()) {
+            String replacement;
+            try {
+                replacement = new String(Character.toChars(
+                        Integer.parseInt(matcher.group(1), radix)));
+            } catch (IllegalArgumentException e) {
+                replacement = matcher.group();
+            }
+            matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(buffer);
+        return buffer.toString();
     }
 
     /**

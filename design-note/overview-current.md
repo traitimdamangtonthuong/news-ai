@@ -39,8 +39,9 @@ it can start, connect to PostgreSQL, perform full CRUD on articles, sources,
 and categories through REST endpoints, and return consistent JSON error
 responses (404/400/409) through a shared error handler. Article search
 (paginated, DTO-based) and feed crawling (upsert-style) are implemented, a
-React frontend scaffold exists under `frontend/`, and AI features are planned
-but not yet implemented.
+React frontend scaffold exists under `frontend/`, and a standalone AI-chatbot
+module (`ai-chatbot/`) answers questions over the crawled articles via the
+public REST API. Full AI features (embeddings / true RAG) remain future work.
 
 ---
 
@@ -121,9 +122,10 @@ mvnw.cmd
 > `crawler/RssCrawlerServiceTest.java`, `crawler/CrawlControllerTest.java`, and an
 > empty `crawler/CrawlerEndToEndTest.java` placeholder.
 >
-> Other top-level work-in-progress: `database/manual-migrations/` (one-time SQL
-> fixes, e.g. BYTEA→TEXT content) and `frontend/` (React 19 + TypeScript + Vite
-> scaffold).
+> Other top-level modules: `database/manual-migrations/` (one-time SQL fixes,
+> e.g. BYTEA→TEXT content), `frontend/` (React 19 + TypeScript + Vite scaffold),
+> and `ai-chatbot/` (standalone Java 21 chatbot that talks to the backend only
+> through the public REST API).
 
 ---
 
@@ -680,6 +682,11 @@ Verified against the code, the following are **implemented**:
 ✓ One-time DB migration script database/manual-migrations/001-articles-content-bytea-to-text.sql
 ✓ Frontend scaffold frontend/ (React 19 + TypeScript + Vite; src/api/articles.ts,
       src/pages/NewsPage.tsx) — early WIP
+✓ Standalone AI Chatbot module ai-chatbot/ (Java 21, Jackson, java.net.http):
+      single-keyword retrieval via GET /api/articles/search, per-article detail
+      fetch, extractive summarizer by default, optional Google Gemini
+      (LLM_API_KEY) with automatic fallback, web chat UI on :8081 + --cli mode.
+      Builds and runs fully independent of the Spring Boot backend.
 ```
 
 ---
@@ -696,11 +703,13 @@ None of the following currently exist in `src/main`:
       implemented; ML similarity is not)
 ✗ Scheduled crawling is off by default (crawler.scheduling.enabled=false;
       manual POST /api/crawl works)
-✗ Spring AI integration, LLM calls, embeddings
-✗ Vector storage / PGVector
-✗ RAG-based chatbot
-✗ AI features: summarization, ask-this-article, semantic search, multi-source comparison
-✗ Source citations in AI answers
+✗ Spring AI integration, embeddings, PGVector storage
+✗ True RAG (semantic retrieval over embeddings) — the ai-chatbot does single-
+      keyword LIKE retrieval only; no multi-turn conversation memory; LLM calls
+      are optional Gemini from ai-chatbot, not embedded in the backend
+✗ Ask-this-article / semantic search / multi-source comparison AI features
+✗ Source citations exist in the ai-chatbot (returned per answer), but not in
+      any AI/chat endpoint of the backend itself
 ✗ Security: Spring Security, JWT, user accounts, roles
 ✗ Frontend features — only a Vite/React scaffold exists (frontend/); no
       completed reader UI yet
@@ -742,8 +751,10 @@ STEP 7  Article search (paginated, DTO response, dynamic Specification)   ✓ do
 STEP 8  RSS crawler + canonical-URL refresh
         (create/update/unchanged, category ownership)                    ✓ done
 STEP 9  Scheduled crawling (disabled by default)                         ✓ scaffold
-STEP 10 Spring AI + embeddings + PGVector
-STEP 11 RAG chatbot with source citations
+STEP 10 Spring AI + embeddings + PGVector (ai-chatbot currently does basic
+       keyword retrieval + optional Gemini; no vector storage yet)
+STEP 11 RAG chatbot with source citations (retrieval-only chatbot exists in
+       ai-chatbot/; true RAG over embeddings pending)
 STEP 12 Frontend (Vite/React scaffold started, UI not complete);
        security / admin dashboard pending
 ```

@@ -17,6 +17,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.newsai.news_ai.crawler.ArticleUrlNormalizer;
 import com.newsai.news_ai.category.Category;
 import com.newsai.news_ai.error.ResourceNotFoundException;
 import com.newsai.news_ai.category.CategoryRepository;
@@ -91,62 +92,41 @@ public class ArticleService {
      * {@code MANUAL} are never overwritten, and a feed that no longer provides
      * a category never clears an existing assignment.
      */
+    
+
     @Transactional
     public ArticleCrawlOutcome upsertFromCrawl(Article candidate) {
-        if (candidate.getCanonicalUrl() == null || candidate.getCanonicalUrl().isBlank()) {
-            throw new IllegalArgumentException("canonicalUrl is required for crawl upsert");
+        String originalUrl = candidate.getUrl();
+        String canonical = ArticleUrlNormalizer.normalize(originalUrl);
+        candidate.setCanonicalUrl(canonical);
+
+        // 1. Look up by canonical URL first
+        Article existing = articleRepository.findByCanonicalUrl(canonical).orElse(null);
+
+        // 2. Legacy backfill: match by raw URL (for rows without canonicalUrl)
+        if (existing == null) {
+            existing = articleRepository.findByUrl(originalUrl).orElse(null);
         }
 
-        Article existing = articleRepository.findByCanonicalUrl(candidate.getCanonicalUrl())
-                .or(() -> articleRepository.findByUrl(candidate.getUrl()))
-                .orElse(null);
+        // Backfill canonical URL on legacy rows that lacked one
+        if (existing != null && existing.getCanonicalUrl() == null) {
+            existing.setCanonicalUrl(canonical);
+        }
 
         if (existing == null) {
-            return createFromCrawl(candidate);
+            // Create new article
+            candidate.setId(null);
+            candidate.setCrawledAt(java.time.LocalDateTime.now());
+            candidate.setLastCrawledAt(java.time.LocalDateTime.now());
+            candidate.setUpdatedAt(java.time.LocalDateTime.now());
+
+            resolveSourceAndCategory(candidate);
+            Article saved = articleRepository.save(candidate);
+            return new ArticleCrawlOutcome(ArticleCrawlStatus.CREATED, saved);
         }
-        return mergeFromCrawl(candidate, existing);
-    }
 
-    private ArticleCrawlOutcome createFromCrawl(Article candidate) {
-        LocalDateTime now = LocalDateTime.now();
-
-        candidate.setId(null);
-        candidate.setCrawledAt(now);
-        candidate.setLastCrawledAt(now);
-        candidate.setUpdatedAt(now);
-
-        Category category = resolveCategory(candidate.getCategory());
-        candidate.setCategory(category);
-        candidate.setCategorySource(category != null ? CategorySource.CRAWLER : null);
-
-        Article saved = articleRepository.saveAndFlush(candidate);
-        return new ArticleCrawlOutcome(ArticleCrawlStatus.CREATED, saved);
-    }
-
-    private ArticleCrawlOutcome mergeFromCrawl(Article candidate, Article existing) {
-        LocalDateTime now = LocalDateTime.now();
+        // Existing article — determine what changed
         boolean changed = false;
-
-        if (existing.getCanonicalUrl() == null || existing.getCanonicalUrl().isBlank()) {
-            existing.setCanonicalUrl(candidate.getCanonicalUrl());
-        }
-
-        // Crawler may only change the category when it owns the current
-        // assignment or the article has none at all.
-        boolean categoryEligible = existing.getCategorySource() == CategorySource.CRAWLER
-                || existing.getCategory() == null;
-        if (categoryEligible) {
-            Category category = resolveCategory(candidate.getCategory());
-            Long currentCategoryId = existing.getCategory() == null
-                    ? null
-                    : existing.getCategory().getId();
-            if (category != null && !Objects.equals(category.getId(), currentCategoryId)) {
-                existing.setCategory(category);
-                existing.setCategorySource(CategorySource.CRAWLER);
-                changed = true;
-            }
-            // No valid category found: keep the existing assignment, never null it.
-        }
 
         if (!Objects.equals(existing.getTitle(), candidate.getTitle())) {
             existing.setTitle(candidate.getTitle());
@@ -169,14 +149,42 @@ public class ArticleService {
             changed = true;
         }
 
-        if (changed) {
-            existing.setUpdatedAt(now);
+        // Category: only update if crawler-owned and feed provides a category
+        if (candidate.getCategory() != null) {
+            if (existing.getCategorySource() == null
+                    || existing.getCategorySource() == CategorySource.CRAWLER) {
+                if (!Objects.equals(existing.getCategory(), candidate.getCategory())) {
+                    existing.setCategory(candidate.getCategory());
+                    existing.setCategorySource(CategorySource.CRAWLER);
+                    changed = true;
+                }
+            }
+            // MANUAL-owned categories are never overwritten by the crawler
         }
-        existing.setLastCrawledAt(now);
+
+        existing.setLastCrawledAt(java.time.LocalDateTime.now());
+        if (changed) {
+            existing.setUpdatedAt(java.time.LocalDateTime.now());
+        }
 
         Article saved = articleRepository.save(existing);
-        return new ArticleCrawlOutcome(
-                changed ? ArticleCrawlStatus.UPDATED : ArticleCrawlStatus.UNCHANGED, saved);
+        ArticleCrawlStatus status = changed ? ArticleCrawlStatus.UPDATED : ArticleCrawlStatus.UNCHANGED;
+        return new ArticleCrawlOutcome(status, saved);
+    }
+
+    private void resolveSourceAndCategory(Article article) {
+        if (article.getSource() != null && article.getSource().getId() != null) {
+            Long sourceId = article.getSource().getId();
+            article.setSource(sourceRepository.findById(sourceId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Source", sourceId)));
+        }
+        if (article.getCategory() != null && article.getCategory().getId() != null) {
+            Long categoryId = article.getCategory().getId();
+            Category category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Category", categoryId));
+            article.setCategory(category);
+            article.setCategorySource(CategorySource.CRAWLER);
+        }
     }
 
     /**
