@@ -1,6 +1,7 @@
 package com.newsai.news_ai.crawler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -174,6 +175,48 @@ class FeedItemMapperTest {
                 new ByteArrayInputStream(rss.getBytes(StandardCharsets.UTF_8)), source());
 
         assertEquals(List.of("EntryCategory"), result.items().get(0).categories());
+    }
+
+    @Test
+    void htmlDescriptionIsStrippedToPlainTextWithEntitiesDecoded() throws Exception {
+        String rss = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0">
+                  <channel>
+                    <title>Feed</title>
+                    <link>https://example.com</link>
+                    <description>d</description>
+                    <item>
+                      <title>VnExpress-style description</title>
+                      <link>https://example.com/html-desc</link>
+                      <description><![CDATA[<a href="https://example.com/story"><img src="https://example.com/i.jpg"></a></br>Người dân có thể tự đăng ký <b>không nhận</b> cuộc gọi quảng cáo&hellip; theo đề xuất&#39; mới.]]></description>
+                    </item>
+                    <item>
+                      <title>Image-only description</title>
+                      <link>https://example.com/img-only</link>
+                      <description><![CDATA[<a href="https://example.com/story2"><img src="https://example.com/i2.jpg"></a>]]></description>
+                    </item>
+                    <item>
+                      <title>Plain description untouched</title>
+                      <link>https://example.com/plain</link>
+                      <description>Một mô tả thuần văn bản.</description>
+                    </item>
+                  </channel>
+                </rss>
+                """;
+
+        FeedParseResult result = mapper.parse(
+                new ByteArrayInputStream(rss.getBytes(StandardCharsets.UTF_8)), source());
+
+        assertEquals(3, result.items().size());
+        // Tags removed, whitespace collapsed, entities (&hellip;, &#39;) decoded.
+        assertEquals(
+                "Người dân có thể tự đăng ký không nhận cuộc gọi quảng cáo… theo đề xuất' mới.",
+                result.items().get(0).description());
+        // Markup-only description has no textual lead -> null, not an empty string.
+        assertNull(result.items().get(1).description());
+        // Descriptions without HTML pass through unchanged.
+        assertEquals("Một mô tả thuần văn bản.", result.items().get(2).description());
     }
 
     private Source source() {

@@ -1,4 +1,4 @@
-import type { ArticleSearchResponse } from "../types/article";
+import type { ArticleSearchResponse } from "../types/articles";
 
 type SearchParams = {
   keyword?: string;

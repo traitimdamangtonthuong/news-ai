@@ -1,6 +1,8 @@
-import { FormEvent, useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { searchArticles } from "../api/articles";
-import type { ArticleSearchResponse } from "../types/article";
+import { extractFirstImageUrl, stripHtmlToText } from "../lib/articleFormat";
+import type { ArticleSearchResponse } from "../types/articles";
 
 const PAGE_SIZE = 12;
 
@@ -83,34 +85,39 @@ export default function NewsPage() {
           </p>
 
           <section className="article-grid">
-            {data.items.map((article) => (
-              <article className="article-card" key={article.id}>
-                {article.imageUrl ? (
-                  <img src={article.imageUrl} alt="" />
-                ) : (
-                  <div className="image-placeholder">NEWS</div>
-                )}
+            {data.items.map((article) => {
+              const cardImage =
+                article.imageUrl ?? extractFirstImageUrl(article.description);
+              const lead =
+                stripHtmlToText(article.description) ?? "Bài viết chưa có phần mô tả.";
 
-                <div className="article-body">
-                  <div className="article-meta">
-                    <span>{article.category?.name ?? "Chưa phân loại"}</span>
-                    <span>{article.source.name}</span>
-                  </div>
-
-                  <h2>{article.title}</h2>
-
-                  <p>
-                    {article.description ?? "Bài viết chưa có phần mô tả."}
-                  </p>
-
-                  {article.publishedAt && (
-                    <time dateTime={article.publishedAt}>
-                      {new Date(article.publishedAt).toLocaleDateString("vi-VN")}
-                    </time>
+              return (
+                <article className="article-card" key={article.id}>
+                  {cardImage ? (
+                    <img src={cardImage} alt="" />
+                  ) : (
+                    <div className="image-placeholder">NEWS</div>
                   )}
-                </div>
-              </article>
-            ))}
+
+                  <div className="article-body">
+                    <div className="article-meta">
+                      <span>{article.category?.name ?? "Chưa phân loại"}</span>
+                      <span>{article.source.name}</span>
+                    </div>
+
+                    <h2>{article.title}</h2>
+
+                    <p>{lead}</p>
+
+                    {article.publishedAt && (
+                      <time dateTime={article.publishedAt}>
+                        {new Date(article.publishedAt).toLocaleDateString("vi-VN")}
+                      </time>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </section>
 
           <nav className="pagination" aria-label="Phân trang">

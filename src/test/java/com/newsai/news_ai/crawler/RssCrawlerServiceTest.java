@@ -30,6 +30,7 @@ import com.newsai.news_ai.category.CategoryRepository;
 import com.newsai.news_ai.error.ResourceNotFoundException;
 import com.newsai.news_ai.source.Source;
 import com.newsai.news_ai.source.SourceRepository;
+import com.newsai.news_ai.crawler.RssCategoryResolver;
 
 /**
  * Crawler orchestration tests. The persistence/refresh semantics live in
@@ -45,6 +46,7 @@ class RssCrawlerServiceTest {
     private RssFeedFetcher feedFetcher;
     private FeedItemMapper feedItemMapper;
     private CrawlerProperties properties;
+    private RssCategoryResolver rssCategoryResolver;
 
     private RssCrawlerService service;
 private static final String FEED = """
@@ -80,10 +82,11 @@ private static final String FEED = """
         feedFetcher = mock(RssFeedFetcher.class);
         feedItemMapper = new FeedItemMapper();
         properties = new CrawlerProperties();
+        rssCategoryResolver = mock(RssCategoryResolver.class);
 
         service = new RssCrawlerService(
                 sourceRepository, articleService, categoryRepository,
-                feedFetcher, feedItemMapper, properties);
+                feedFetcher, feedItemMapper, properties, rssCategoryResolver);
     }
 
     @Test

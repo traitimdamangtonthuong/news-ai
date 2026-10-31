@@ -34,6 +34,7 @@ public class RssCrawlerService {
     private final RssFeedFetcher feedFetcher;
     private final FeedItemMapper feedItemMapper;
     private final CrawlerProperties properties;
+    private final RssCategoryResolver rssCategoryResolver;
 
     public RssCrawlerService(
             SourceRepository sourceRepository,
@@ -41,13 +42,15 @@ public class RssCrawlerService {
             CategoryRepository categoryRepository,
             RssFeedFetcher feedFetcher,
             FeedItemMapper feedItemMapper,
-            CrawlerProperties properties) {
+            CrawlerProperties properties,
+            RssCategoryResolver rssCategoryResolver) {
         this.sourceRepository = sourceRepository;
         this.articleService = articleService;
         this.categoryRepository = categoryRepository;
         this.feedFetcher = feedFetcher;
         this.feedItemMapper = feedItemMapper;
         this.properties = properties;
+        this.rssCategoryResolver = rssCategoryResolver;
     }
 
     /**
@@ -161,6 +164,14 @@ public class RssCrawlerService {
             }
         }
 
+        if (category == null && source.getRssUrl() != null) {
+            String resolvedCategoryName = rssCategoryResolver.resolveCategoryName(source.getRssUrl());
+            if (resolvedCategoryName != null) {
+                category = categoryRepository
+                        .findByName(resolvedCategoryName).orElseGet(() -> categoryRepository.save(new Category(null, resolvedCategoryName)));
+            }
+        }
+        
         article.setTitle(item.title());
         article.setDescription(item.description());
         article.setContent(item.content());
