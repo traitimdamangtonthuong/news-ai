@@ -53,6 +53,14 @@ public class ArticlePageScraper {
      * CSS selectors cho breadcrumb, theo thứ tự ưu tiên.
      * Mỗi phần tử là một selector trả về danh sách các link a.
      */
+    private static final List<String> CONTENT_SELECTORS = List.of(
+            "article.fck_detail",      // VnExpress
+            ".detail-content",         // Thanh Niên
+            ".detail__cmain",          // Dân Trí
+            ".article-content",        // Generic / Phổ thông
+            ".entry-content"           // WordPress sites
+    );
+
     private static final List<String> BREADCRUMB_SELECTORS = List.of(
             "ul.breadcrumb li a",   // VnExpress standard
             "ol.breadcrumb li a",   // Thanh Niên
@@ -69,9 +77,9 @@ public class ArticlePageScraper {
      * @return {@link BreadcrumbResult} chứa parent + subcategory names/slugs,
      *         hoặc {@link BreadcrumbResult#EMPTY} nếu không đọc được.
      */
-    public BreadcrumbResult scrape(String articleUrl) {
+    public ArticleScrapeResult scrape(String articleUrl) {
         if (articleUrl == null || articleUrl.isBlank()) {
-            return BreadcrumbResult.EMPTY;
+            return ArticleScrapeResult.EMPTY; // ĐÃ SỬA
         }
 
         try {
@@ -81,15 +89,71 @@ public class ArticlePageScraper {
                     .followRedirects(true)
                     .get();
 
-            return extractBreadcrumb(doc, articleUrl);
+            // Trích xuất cả Breadcrumb và Content
+            BreadcrumbResult breadcrumb = extractBreadcrumb(doc, articleUrl);
+            String content = extractContent(doc, articleUrl);
+
+            return new ArticleScrapeResult(breadcrumb, content);
 
         } catch (IOException e) {
-            log.debug("Could not fetch article page for breadcrumb [{}]: {}", articleUrl, e.getMessage());
-            return BreadcrumbResult.EMPTY;
+            log.debug("Could not fetch article page [{}]: {}", articleUrl, e.getMessage());
+            return ArticleScrapeResult.EMPTY; // ĐÃ SỬA
         } catch (Exception e) {
-            log.warn("Unexpected error scraping breadcrumb [{}]: {}", articleUrl, e.getMessage());
-            return BreadcrumbResult.EMPTY;
+            log.warn("Unexpected error scraping [{}]: {}", articleUrl, e.getMessage());
+            return ArticleScrapeResult.EMPTY; // ĐÃ SỬA
         }
+    }
+
+    private String extractContent(Document doc, String articleUrl) {
+        for (String selector : CONTENT_SELECTORS) {
+            Element contentEl = doc.selectFirst(selector);
+            if (contentEl != null) {
+                // 1. Dọn dẹp rác (tin liên quan, banner, script, table gửi câu hỏi, meta ẩn)
+                contentEl.select(".box-tinlienquan, .banner, script, iframe, table, [data-component-type], meta, style").remove();
+                
+                // 2. Xử lý Video từ VnExpress (MỚI)
+                // Tìm tất cả các khối chứa video
+                Elements videoFigures = contentEl.select("figure:has(video)");
+                for (Element figure : videoFigures) {
+                    Element videoEl = figure.selectFirst("video");
+                    Element imgEl = figure.selectFirst("img"); // Lấy ảnh cover thumbnail
+                    
+                    if (videoEl != null) {
+                        String videoSrc = videoEl.attr("src");
+                        String posterSrc = (imgEl != null) ? imgEl.attr("src") : "";
+                        
+                        // Xây dựng lại thẻ video HTML5 chuẩn, gọn gàng, bỏ qua player của VnExpress
+                        String cleanVideoHtml = String.format(
+                            "<video controls width=\"100%%\" poster=\"%s\" src=\"%s\"></video>", 
+                            posterSrc, videoSrc
+                        );
+                        
+                        // Thay thế toàn bộ khối div lồng ghép lộn xộn bằng thẻ video sạch
+                        Element videoContainer = figure.selectFirst("div[id^=video_parent]");
+                        if (videoContainer != null) {
+                            videoContainer.replaceWith(Jsoup.parse(cleanVideoHtml).body().child(0));
+                        }
+                    }
+                }
+
+                // 3. Sửa lỗi ảnh Lazy-load thông thường
+                Elements images = contentEl.select("img");
+                for (Element img : images) {
+                    String realSrc = img.attr("data-src");
+                    if (!realSrc.isBlank()) {
+                        img.attr("src", realSrc); // Thay src ảo bằng ảnh thật
+                    }
+                    img.removeAttr("data-src").removeAttr("data-srcset").removeAttr("intrinsicsize");
+                }
+
+                // 4. Xóa CSS inline và các thuộc tính rác để Frontend tự style
+                contentEl.select("*").removeAttr("style").removeAttr("class").removeAttr("itemprop")
+                         .removeAttr("itemscope").removeAttr("itemtype").removeAttr("onclick").removeAttr("id");
+
+                return contentEl.html();
+            }
+        }
+        return null;
     }
 
     /**
