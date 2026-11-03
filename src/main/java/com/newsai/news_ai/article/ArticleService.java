@@ -125,7 +125,7 @@ public class ArticleService {
             return new ArticleCrawlOutcome(ArticleCrawlStatus.CREATED, saved);
         }
 
-        // Existing article — determine what changed
+        // Existing article â€” determine what changed
         boolean changed = false;
 
         if (!Objects.equals(existing.getTitle(), candidate.getTitle())) {
@@ -161,6 +161,17 @@ public class ArticleService {
             }
             // MANUAL-owned categories are never overwritten by the crawler
         }
+
+        // SubCategory: update if crawler provides one and existing is null or CRAWLER-owned
+        // if (candidate.getSubCategory() != null) {
+        //     if (existing.getCategorySource() == null
+        //             || existing.getCategorySource() == CategorySource.CRAWLER) {
+        //         if (!Objects.equals(existing.getSubCategory(), candidate.getSubCategory())) {
+        //             existing.setSubCategory(candidate.getSubCategory());
+        //             changed = true;
+        //         }
+        //     }
+        // }
 
         existing.setLastCrawledAt(java.time.LocalDateTime.now());
         if (changed) {
@@ -232,6 +243,14 @@ public class ArticleService {
         article.setPublishedAt(updatedArticle.getPublishedAt());
 
         return articleRepository.save(article);
+    }
+
+    /**
+     * Kiểm tra bài viết đã tồn tại theo canonical URL (dùng bởi crawler).
+     * Dùng SELECT EXISTS — không load toàn bộ entity.
+     */
+    public boolean existsByCanonicalUrl(String canonicalUrl) {
+        return articleRepository.existsByCanonicalUrl(canonicalUrl);
     }
 
     public void deleteArticle(Long id) {

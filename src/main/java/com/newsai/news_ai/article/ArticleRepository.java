@@ -17,4 +17,5 @@ public interface ArticleRepository
 
     Optional<Article> findByCanonicalUrl(String canonicalUrl);
 
+    boolean existsByCanonicalUrl(String canonicalUrl);
 }
