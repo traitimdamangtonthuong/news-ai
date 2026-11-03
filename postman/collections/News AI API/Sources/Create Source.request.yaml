@@ -7,11 +7,11 @@ body:
   type: json
   content: "{\r
 
-    \  \"name\": \"Test RSS\",\r
+    \  \"name\": \"VnExpress - Pháp Luật\",\r
 
-    \  \"baseUrl\": \"https://example.com\",\r
+    \  \"baseUrl\": \"https://vnexpress.net\",\r
 
-    \  \"rssUrl\": \"http://localhost:8090/feed.xml\"\r
+    \  \"rssUrl\": \"https://vnexpress.net/rss/phap-luat.rss\"\r
 
     }"
 order: 1788839003308

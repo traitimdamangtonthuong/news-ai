@@ -1,0 +1,40 @@
+﻿=== fixtures/feed-vnexpress.xml  items=59  skipped=0 ===
+  title         : 14 nhÃ  khoa há»c Viá»‡t lÃ  'NgÃ´i sao Ä‘ang lÃªn' trong xáº¿p háº¡ng tháº¿ giá»›i
+  publishedAt   : 2026-10-08T04:34:44
+  imageUrl      : https://i1-vnexpress.vnecdn.net/2026/10/08/1555639730355tranxuanbachlzsi-9220-5702-1791433755.webp?w=1200&h=0&q=100&dpr=1&fit=crop&s=LR_0A1CmaK98fNkRkwcfRQ
+  categories    : []
+  description   : CÃ¡c nhÃ  khoa há»c Viá»‡t Ä‘Æ°á»£c xáº¿p háº¡ng cao á»Ÿ cÃ¡c báº£ng chuyÃªn ngÃ nh, trong Ä‘Ã³ báº£ng NgÃ´i sao má»›i ná»•i (Rising Stars) ghi nháº­n 14 gÆ°Æ¡ng máº·t xuáº¥t sáº¯c.
+  ---
+  title         : ÄÆ°á»ng Ä‘Ã¡ cá»• hÆ¡n 100 nÄƒm tuá»•i giá»¯a nÃºi rá»«ng TÃ¢y Báº¯c
+  publishedAt   : 2026-10-08T04:34:34
+  imageUrl      : https://i1-vnexpress.vnecdn.net/2026/10/06/1791270301227-be7c1dfb31abac58-5821-2749-1791273910.jpg?w=1200&h=0&q=100&dpr=1&fit=crop&s=3_xSTN0otmiI0CWuTYZNEg
+  categories    : []
+  description   : Tráº£i qua hÆ¡n má»™t tháº¿ ká»·, tuyáº¿n Ä‘Æ°á»ng Ä‘Ã¡ cá»• Pavie tá»«ng lÃ  huyáº¿t máº¡ch giao thÆ°Æ¡ng á»Ÿ vÃ¹ng TÃ¢y Báº¯c nay trá»Ÿ thÃ nh Ä‘iá»ƒm trekking Ä‘Æ°á»£c nhiá»u ngÆ°á»i yÃªu thiÃªn nhiÃªn tÃ¬m Ä‘áº¿n.
+  ---
+=== fixtures/feed-thanhnien.xml  items=50  skipped=0 ===
+  title         : Giáº£m &#225;p lá»±c gi&#225;o vi&#234;n, Ä‘á»«ng dá»«ng á»Ÿ chá»‰ Ä‘áº¡o
+  publishedAt   : 2026-10-07T22:52
+  imageUrl      : null
+  categories    : []
+  description   : Giáº£i phÃ³ng sá»©c lao Ä‘á»™ng cá»§a ngÆ°á»i tháº§y, giáº£m nhá»¯ng Ã¡p lá»±c khÃ´ng Ä‘Ã¡ng cÃ³ Ä‘á»ƒ nhÃ  giÃ¡o Ä‘áº§u tÆ° vÃ o chuyÃªn mÃ´n váº«n Ä‘ang trong tÃ¬nh tráº¡ng "trÃªn nÃ³ng, dÆ°á»›i láº¡nh". Bá»™ thÃ¬ quyáº¿t liá»‡t, giá»¥c giÃ£ nhÆ°ng cÆ¡ sá»Ÿ váº«n chÆ°a tháº¥y cáº§n.
+  ---
+  title         : Gi&#225; xÄƒng theo cÆ¡ cháº¿ thá»‹ trÆ°á»ng, sao láº¡i lo?
+  publishedAt   : 2026-10-06T22:52
+  imageUrl      : null
+  categories    : []
+  description   : Má»—i cÃ¢y xÄƒng cÃ³ thá»ƒ cÃ³ má»™t giÃ¡ bÃ¡n khÃ¡c nhau, ngÆ°á»i dÃ¢n cÃ³ quyá»n lá»±a chá»n chá»— nÃ o giÃ¡ ráº» hÆ¡n, phá»¥c vá»¥ tá»‘t hÆ¡n... Viá»‡c nÃ y rÃµ rÃ ng sáº½ giÃºp tÄƒng tÃ­nh cáº¡nh tranh trÃªn thá»‹ trÆ°á»ng xÄƒng dáº§u nhÆ°ng chÃ­nh ngÆ°á»i tiÃªu dÃ¹ng váº«n lo ngáº¡i viá»‡c trao quyá»n tá»± quyáº¿t giÃ¡ cho doanh nghiá»‡p. VÃ¬ sao?
+  ---
+=== fixtures/feed-nhandan.xml  items=50  skipped=0 ===
+  title         : Chuyáº¿n thÄƒm cá»§a Chá»§ tá»‹ch Quá»‘c há»™i cÃ³ Ã½ nghÄ©a Ä‘áº·c biá»‡t vá»›i há»£p tÃ¡c giá»¯a cÆ¡ quan láº­p phÃ¡p Viá»‡t Nam-Trung Quá»‘c
+  publishedAt   : null
+  imageUrl      : null
+  categories    : [Tháº¿ giá»›i]
+  description   : Chuyáº¿n thÄƒm chÃ­nh thá»©c Trung Quá»‘c sáº¯p tá»›i cá»§a Chá»§ tá»‹ch Quá»‘c há»™i Tráº§n Thanh Máº«n sáº½ Ä‘Ã¡nh dáº¥u má»™t bÆ°á»›c tiáº¿n má»›i trong há»£p tÃ¡c giá»¯a hai Äáº£ng, hai nÆ°á»›c cÅ©ng nhÆ° giá»¯a cÆ¡ quan láº­p phÃ¡p hai nÆ°á»›c; gÃ³p pháº§n cá»§ng cá»‘ vÃ  phÃ¡t triá»ƒn hÆ¡n ná»¯a quan há»‡ Äá»‘i tÃ¡c há»£p tÃ¡c chiáº¿n lÆ°á»£c toÃ n diá»‡n Viá»‡t Nam-Trung Quá»‘c . ÄÃ³ng gÃ³p tÃ­ch cá»±c, trÃ¡ch nhiá»‡m vÃ o phÃ¡t triá»ƒn quan há»‡ Äá»‘i tÃ¡c chiáº¿n lÆ°á»£c toÃ n diá»‡n ASEAN-Trung Quá»‘c Chá»§ tá»‹ch Há»™i Ä‘á»“ng LÃ½ luáº­n Trung Æ°Æ¡ng Nguyá»…n XuÃ¢n Tháº¯ng thÄƒm vÃ  lÃ m viá»‡c táº¡i Trung Quá»‘c Kháº³ng Ä‘á»‹nh táº§m quan trá»ng cá»§a há»£p tÃ¡c, trao Ä‘á»•i lÃ½ luáº­n Viá»‡t Nam-Trung Quá»‘c Äáº¡i sá»© quÃ¡n Viá»‡t Nam táº¡i Trung Quá»‘c tá»• chá»©c Lá»… ká»· niá»‡m 81 nÄƒm Quá»‘c khÃ¡nh Báº¯c Ninh Ä‘áº©y máº¡nh thu hÃºt dÃ²ng vá»‘n Ä‘áº§u tÆ° tá»« Trung Quá»‘c Khai thÃ¡c hiá»‡u quáº£ tiá»m nÄƒng há»£p tÃ¡c ASEAN-Trung Quá»‘c
+  ---
+  title         : Há»“ Kezenoy-Am - "Baikal cá»§a vÃ¹ng Kavkaz"
+  publishedAt   : null
+  imageUrl      : null
+  categories    : [Tháº¿ giá»›i]
+  description   : Náº±m á»Ÿ Ä‘á»™ cao 1.870m so vá»›i má»±c nÆ°á»›c biá»ƒn trÃªn ranh giá»›i tá»± nhiÃªn giá»¯a Cá»™ng hÃ²a Chechnya vÃ  Dagestan thuá»™c LiÃªn bang Nga , há»“ Kezenoy-Am Ä‘Æ°á»£c má»‡nh danh lÃ  â€œviÃªn ngá»c bÃ­châ€ sÃ¢u vÃ  rá»™ng nháº¥t cá»§a vÃ¹ng nÃºi báº¯c Kavkaz. [áº¢nh] Thu vÃ ng Kavkaz á»Ÿ miá»n nam nÆ°á»›c Nga
+  ---
+
