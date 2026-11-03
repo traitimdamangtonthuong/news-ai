@@ -19,7 +19,7 @@ import jakarta.persistence.Table;
 import com.newsai.news_ai.category.Category;
 import com.newsai.news_ai.source.Source;
 
-@Entity // Object này có thể được lưu trong relational database bằng JPA.
+@Entity // Object nÃ y cÃ³ thá»ƒ Ä‘Æ°á»£c lÆ°u trong relational database báº±ng JPA.
 @Table(name = "articles", uniqueConstraints = @UniqueConstraint(
         name = "uk_articles_canonical_url",
         columnNames = "canonicalUrl"))
@@ -46,6 +46,14 @@ public class Article {
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
+
+    /**
+     * Subcategory (danh muc con) doc tu breadcrumb trang bai viet.
+     * Vi du: category = "Khoa hoc cong nghe", subCategory = "AI".
+     */
+    // @ManyToOne
+    // @JoinColumn(name = "subcategory_id")
+    // private Category subCategory;
 
     @NotBlank(message = "URL is required")
     @Size(max = 2048)
