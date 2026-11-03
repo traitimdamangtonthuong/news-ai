@@ -1,22 +1,4 @@
 $kind: http-request
-url: "{{baseUrl}}/api/crawl"
+url: "{{baseUrl}}/api/crawl/sources/"
 method: POST
-order: 4221968952000003
-# Response: 200 OK — array of per-source crawl results:
-# [
-#   {
-#     "sourceId": 1,
-#     "sourceName": "Example News",
-#     "fetched": 25,
-#     "created": 3,
-#     "updated": 5,
-#     "unchanged": 16,
-#     "failed": 0,
-#     "errors": []
-#   }
-# ]
-# fetched   = items read from the feed
-# created   = new articles stored
-# updated   = existing articles whose crawler-managed fields changed
-# unchanged = articles observed with no change (incl. in-run duplicates)
-# failed    = items that errored after the concurrent-create retry
+order: 2889857416449745
