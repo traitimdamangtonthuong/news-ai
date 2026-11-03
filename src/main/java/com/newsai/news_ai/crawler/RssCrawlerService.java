@@ -150,7 +150,13 @@ public class RssCrawlerService {
 
     private void upsertItem(RssFeedItem item, Source source, Counters counters, List<String> errors) {
         try {
-            applyOutcome(articleService.upsertFromCrawl(toArticle(item, source)), counters);
+            Article article = toArticle(item, source);
+            if (article == null) {
+                counters.failed++; // Hoặc tính vào bộ đếm bỏ qua tùy ý bạn
+                errors.add("Filtered out malformed article: " + item.url());
+                return;
+            }
+            applyOutcome(articleService.upsertFromCrawl(article), counters);
         } catch (DataIntegrityViolationException e) {
             // Concurrent create/backfill race: another process just wrote this
             // canonical URL. Re-read it and process the item as existing.
@@ -213,6 +219,26 @@ public class RssCrawlerService {
 
         if (isNew) {
             ArticleScrapeResult scrapeResult = articlePageScraper.scrape(item.url());
+            String rawHtmlContent = scrapeResult.content();
+            
+            if (rawHtmlContent == null || rawHtmlContent.isBlank()) {
+                log.warn("Bỏ qua bài viết do không cào được nội dung HTML: {}", item.url());
+                return null;
+            }
+
+            org.jsoup.nodes.Document doc = org.jsoup.Jsoup.parse(rawHtmlContent);
+            int paragraphCount = doc.select("p").size();
+            
+            // Đếm số lượng câu hỏi phỏng vấn (dấu gạch ngang in nghiêng)
+            int interviewQuestionsCount = doc.select("p > i").size();
+
+            // CHẶN: Bài quá ít chữ (< 3 đoạn) HOẶC là bài phỏng vấn (có từ 4 câu hỏi Q&A trở lên)
+            if (paragraphCount < 3 || interviewQuestionsCount >= 4) {
+                log.warn("Đã chặn bài viết dị hợm/phỏng vấn ({} thẻ <p>, {} câu hỏi Q&A): {}", 
+                        paragraphCount, interviewQuestionsCount, item.url());
+                return null; // Từ chối lưu vào Database
+            }
+
             BreadcrumbResult breadcrumb = scrapeResult.breadcrumb();
 
             // Xử lý gán danh mục (Category) từ breadcrumb
@@ -229,11 +255,9 @@ public class RssCrawlerService {
                 }
             }
 
-            // Ghi đè content lấy từ RSS bằng nội dung chi tiết (HTML) cào được
-            if (scrapeResult.content() != null && !scrapeResult.content().isBlank()) {
-                fullContent = scrapeResult.content();
-            }
+            fullContent = rawHtmlContent;
         }
+        
         String cleanTitle = HtmlUtils.htmlUnescape(item.title());
         String cleanDescription = HtmlUtils.htmlUnescape(item.description());
 
