@@ -5,7 +5,9 @@ import java.net.URI;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Set;
 
+import org.jsoup.nodes.Attribute;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -54,11 +56,8 @@ public class ArticlePageScraper {
      * Mỗi phần tử là một selector trả về danh sách các link a.
      */
     private static final List<String> CONTENT_SELECTORS = List.of(
-            "article.fck_detail",      // VnExpress
-            ".detail-content",         // Thanh Niên
-            ".detail__cmain",          // Dân Trí
-            ".article-content",        // Generic / Phổ thông
-            ".entry-content"           // WordPress sites
+            "article.fck_detail:has(p)", 
+            ".detail-content:has(p)"
     );
 
     private static final List<String> BREADCRUMB_SELECTORS = List.of(
@@ -70,6 +69,21 @@ public class ArticlePageScraper {
             "nav[aria-label=breadcrumb] a"
     );
 
+    /** Các phần tử rác cần xóa khỏi nội dung bài viết. */
+    private static final String NOISE_SELECTORS = String.join(", ",
+            ".box-tinlienquan", ".banner", "script", "iframe", "table", "style", "meta", "noscript",
+            "svg", "[data-widget]", "[data-component-type]", "[data-token]",
+            ".social-box", ".btn-share", ".footer-content",
+            "a[href^=javascript]",          // nút share fb/tw, in bài
+            "a[href^=#box_comment]",        // nút bình luận
+            "[data-type=comment]",
+            "a[href^=/gui-bai-viet]",       // link "gửi bài viết"
+            "div:containsOwn(Gửi câu hỏi)"  // hộp "Gửi câu hỏi, ý kiến... tại đây"
+    );
+
+    /** Chỉ giữ lại các thuộc tính cần thiết cho việc hiển thị. */
+    private static final Set<String> KEEP_ATTRS =
+            Set.of("href", "src", "alt", "poster", "controls", "width");
     /**
      * Scrape breadcrumb từ trang bài viết.
      *
@@ -105,54 +119,80 @@ public class ArticlePageScraper {
     }
 
     private String extractContent(Document doc, String articleUrl) {
+        log.debug("Fetched HTML length={} for [{}]\n{}", 
+            doc.html().length(), articleUrl, doc.html().substring(0, Math.min(2000, doc.html().length())));
+
         for (String selector : CONTENT_SELECTORS) {
             Element contentEl = doc.selectFirst(selector);
-            if (contentEl != null) {
-                // 1. Dọn dẹp rác (tin liên quan, banner, script, table gửi câu hỏi, meta ẩn)
-                contentEl.select(".box-tinlienquan, .banner, script, iframe, table, [data-component-type], meta, style").remove();
-                
-                // 2. Xử lý Video từ VnExpress (MỚI)
-                // Tìm tất cả các khối chứa video
-                Elements videoFigures = contentEl.select("figure:has(video)");
-                for (Element figure : videoFigures) {
-                    Element videoEl = figure.selectFirst("video");
-                    Element imgEl = figure.selectFirst("img"); // Lấy ảnh cover thumbnail
-                    
-                    if (videoEl != null) {
-                        String videoSrc = videoEl.attr("src");
-                        String posterSrc = (imgEl != null) ? imgEl.attr("src") : "";
-                        
-                        // Xây dựng lại thẻ video HTML5 chuẩn, gọn gàng, bỏ qua player của VnExpress
-                        String cleanVideoHtml = String.format(
-                            "<video controls width=\"100%%\" poster=\"%s\" src=\"%s\"></video>", 
-                            posterSrc, videoSrc
-                        );
-                        
-                        // Thay thế toàn bộ khối div lồng ghép lộn xộn bằng thẻ video sạch
-                        Element videoContainer = figure.selectFirst("div[id^=video_parent]");
-                        if (videoContainer != null) {
-                            videoContainer.replaceWith(Jsoup.parse(cleanVideoHtml).body().child(0));
-                        }
-                    }
-                }
+            if (contentEl == null) continue;
 
-                // 3. Sửa lỗi ảnh Lazy-load thông thường
-                Elements images = contentEl.select("img");
-                for (Element img : images) {
-                    String realSrc = img.attr("data-src");
-                    if (!realSrc.isBlank()) {
-                        img.attr("src", realSrc); // Thay src ảo bằng ảnh thật
-                    }
-                    img.removeAttr("data-src").removeAttr("data-srcset").removeAttr("intrinsicsize");
-                }
+            // 1. Xóa rác (share, comment, svg, widget, hộp gửi bài...)
+            contentEl.select(NOISE_SELECTORS).remove();
 
-                // 4. Xóa CSS inline và các thuộc tính rác để Frontend tự style
-                contentEl.select("*").removeAttr("style").removeAttr("class").removeAttr("itemprop")
-                         .removeAttr("itemscope").removeAttr("itemtype").removeAttr("onclick").removeAttr("id");
+            // 2. Video -> thẻ <video> HTML5 sạch
+            for (Element video : contentEl.select("video")) {
+                Element figure = video.closest("figure");
+                Element img = figure != null ? figure.selectFirst("img") : null;
+                String src = video.hasAttr("src") ? video.attr("src") : video.select("source").attr("src");
+                String poster = img != null ? img.attr("src") : video.attr("poster");
+                if (src.isBlank()) { video.remove(); continue; }
 
-                return contentEl.html();
+                Element clean = new Element("video")
+                        .attr("controls", "").attr("width", "100%")
+                        .attr("poster", poster).attr("src", src);
+                Element container = video.closest("div[id^=video_parent]");
+                (container != null ? container : video).replaceWith(clean);
             }
+
+            // 3. <picture> -> <img> đơn giản, sửa lazy-load (data-src -> src)
+            for (Element picture : contentEl.select("picture")) {
+                Element img = picture.selectFirst("img");
+                if (img != null) picture.replaceWith(img.clone()); else picture.remove();
+            }
+            for (Element img : contentEl.select("img")) {
+                String realSrc = img.attr("data-src");
+                if (!realSrc.isBlank()) img.attr("src", realSrc);
+            }
+
+            // 4. Khử trùng lặp nội dung (Loại bỏ các đoạn <p> hoặc khối bị lặp đôi do layout mobile/desktop)
+            Set<String> seenParagraphs = new java.util.HashSet<>();
+            for (Element p : contentEl.select("p")) {
+                String text = p.text().trim();
+                // Nếu đoạn văn dài hơn 15 ký tự và đã xuất hiện trước đó -> xóa bản sao
+                if (text.length() > 15) {
+                    if (seenParagraphs.contains(text)) {
+                        p.remove();
+                    } else {
+                        seenParagraphs.add(text);
+                    }
+                }
+            }
+
+            // 5. Chỉ giữ whitelist thuộc tính (xóa class, style, id, data-*, loading...)
+            for (Element el : contentEl.getAllElements()) {
+                el.attributes().asList().stream()
+                        .map(Attribute::getKey)
+                        .filter(k -> !KEEP_ATTRS.contains(k))
+                        .toList()
+                        .forEach(el::removeAttr);
+            }
+
+            // 6. Dọn thẻ rỗng lặp đến khi hết (xử lý được div lồng div, khoảng trắng/xuống dòng)
+            boolean removed;
+            do {
+                removed = false;
+                for (Element el : contentEl.select("p, div, span, a, figure, figcaption, strong, em, b, i, section")) {
+                    if (el == contentEl || el.parent() == null) continue;
+                    if (!el.hasText() && el.select("img, video, audio, iframe").isEmpty()) {
+                        el.remove();
+                        removed = true;
+                    }
+                }
+            } while (removed);
+
+            return contentEl.html();
         }
+        log.debug("Không tìm thấy nội dung bài viết bằng các selector hiện có cho [{}]", articleUrl);
         return null;
     }
 
