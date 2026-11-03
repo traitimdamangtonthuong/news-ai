@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 import com.newsai.news_ai.article.Article;
 import com.newsai.news_ai.article.ArticleCrawlOutcome;
@@ -206,39 +207,41 @@ public class RssCrawlerService {
         // Kiểm tra bằng canonical URL trước khi gọi Jsoup.
         String canonical = ArticleUrlNormalizer.normalize(item.url());
         boolean isNew = !articleService.existsByCanonicalUrl(canonical);
+        
+        // Mặc định lấy tóm tắt từ RSS nếu chưa có nội dung chi tiết
+        String fullContent = item.content(); 
 
         if (isNew) {
-            BreadcrumbResult breadcrumb = articlePageScraper.scrape(item.url());
+            ArticleScrapeResult scrapeResult = articlePageScraper.scrape(item.url());
+            BreadcrumbResult breadcrumb = scrapeResult.breadcrumb();
 
+            // Xử lý gán danh mục (Category) từ breadcrumb
             if (breadcrumb.hasData()) {
-                // Khởi tạo gốc ban đầu. Nếu crawler đã lấy được category từ URL RSS (bước 2), lấy nó làm gốc (Parent)
                 Category currentParent = category;
-
-                // Vòng lặp duyệt qua dải: Xe -> Thị trường -> Thế giới
                 for (BreadcrumbResult.BreadcrumbNode node : breadcrumb.chain()) {
                     Category cat = findOrCreateCategory(node.name(), node.slug(), currentParent);
                     if (cat != null) {
-                        currentParent = cat; // Lấy danh mục vừa tạo làm cha cho vòng lặp tiếp theo
+                        currentParent = cat;
                     }
                 }
-
-                // Chốt sổ: Bài báo chỉ trỏ vào danh mục bé nhất / sâu nhất
                 if (currentParent != null) {
                     category = currentParent;
                 }
             }
-        }
 
-        article.setTitle(item.title());
-        article.setDescription(item.description());
-        article.setContent(item.content());
+            // Ghi đè content lấy từ RSS bằng nội dung chi tiết (HTML) cào được
+            if (scrapeResult.content() != null && !scrapeResult.content().isBlank()) {
+                fullContent = scrapeResult.content();
+            }
+        }
+        String cleanTitle = HtmlUtils.htmlUnescape(item.title());
+        String cleanDescription = HtmlUtils.htmlUnescape(item.description());
+
+        article.setTitle(cleanTitle);
+        article.setDescription(cleanDescription);
+        article.setContent(fullContent); // <--- Đã được lấp đầy bằng nội dung chi tiết
         article.setSource(source);
-        
-        // Gán vào category sâu nhất
-        article.setCategory(category);
-        
-        // Chú ý: Bỏ hoàn toàn việc dùng article.setSubCategory() ở đây
-        
+        article.setCategory(category); 
         article.setUrl(item.url());
         article.setCanonicalUrl(canonical);
         article.setImageUrl(item.imageUrl());
