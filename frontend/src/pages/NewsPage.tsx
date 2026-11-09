@@ -1,7 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import {
-  getArticleById,
   getCategories,
   searchArticles,
   type Category,
@@ -12,12 +11,20 @@ import type { ArticleSearchResponse } from "../types/articles";
 
 const PAGE_SIZE = 12;
 
-export default function NewsPage() {
+interface NewsPageProps {
+  initialCategory?: string;
+  onOpenArticle: (id: number) => void;
+}
+
+export default function NewsPage({
+  initialCategory = "",
+  onOpenArticle,
+}: NewsPageProps) {
   const [inputKeyword, setInputKeyword] = useState("");
   const [keyword, setKeyword] = useState("");
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
 
   const [publishedFrom, setPublishedFrom] = useState<string>("");
   const [publishedTo, setPublishedTo] = useState<string>("");
@@ -26,6 +33,12 @@ export default function NewsPage() {
   const [data, setData] = useState<ArticleSearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (initialCategory) {
+      setSelectedCategory(initialCategory);
+    }
+  }, [initialCategory]);
 
   useEffect(() => {
     getCategories()
@@ -70,21 +83,6 @@ export default function NewsPage() {
   function handleSelectCategory(catId: string) {
     setSelectedCategory(catId);
     setPage(0);
-  }
-
-  // Khi click vào tiêu đề bài viết, lấy link gốc và mở tab mới
-  async function handleOpenArticle(id: number) {
-    try {
-      const detail = await getArticleById(id);
-      if (detail.url) {
-        window.open(detail.url, "_blank", "noopener,noreferrer");
-      } else {
-        alert("Bài viết này không có liên kết gốc!");
-      }
-    } catch (err) {
-      console.error("Lỗi khi mở bài báo:", err);
-      alert("Không thể tải bài viết, vui lòng kiểm tra lại Backend.");
-    }
   }
 
   return (
@@ -176,9 +174,13 @@ export default function NewsPage() {
                 "Bài viết chưa có phần mô tả.";
 
               return (
-                <article className="article-card" key={article.id}>
+                <article
+                  className="article-card clickable-card"
+                  key={article.id}
+                  onClick={() => onOpenArticle(article.id)}
+                >
                   {cardImage ? (
-                    <img src={cardImage} alt="" />
+                    <img src={cardImage} alt="" loading="lazy" />
                   ) : (
                     <div className="image-placeholder">NEWS</div>
                   )}
@@ -197,8 +199,7 @@ export default function NewsPage() {
 
                     <h2
                       className="article-title"
-                      onClick={() => handleOpenArticle(article.id)}
-                      title="Bấm để đọc bài báo gốc"
+                      title="Bấm để đọc nội dung bài viết"
                     >
                       {article.title}
                     </h2>
