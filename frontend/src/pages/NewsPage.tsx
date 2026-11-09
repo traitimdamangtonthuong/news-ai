@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  getArticleById,
   getCategories,
   searchArticles,
   type Category,
@@ -70,21 +70,6 @@ export default function NewsPage() {
   function handleSelectCategory(catId: string) {
     setSelectedCategory(catId);
     setPage(0);
-  }
-
-  // Khi click vào tiêu đề bài viết, lấy link gốc và mở tab mới
-  async function handleOpenArticle(id: number) {
-    try {
-      const detail = await getArticleById(id);
-      if (detail.url) {
-        window.open(detail.url, "_blank", "noopener,noreferrer");
-      } else {
-        alert("Bài viết này không có liên kết gốc!");
-      }
-    } catch (err) {
-      console.error("Lỗi khi mở bài báo:", err);
-      alert("Không thể tải bài viết, vui lòng kiểm tra lại Backend.");
-    }
   }
 
   return (
@@ -195,13 +180,11 @@ export default function NewsPage() {
                       )}
                     </div>
 
-                    <h2
-                      className="article-title"
-                      onClick={() => handleOpenArticle(article.id)}
-                      title="Bấm để đọc bài báo gốc"
-                    >
-                      {article.title}
-                    </h2>
+                    <Link to={`/article/${article.id}`} className="article-title-link">
+                      <h2 className="article-title" title="Bấm để đọc chi tiết bài viết">
+                        {article.title}
+                      </h2>
+                    </Link>
                     <p>{lead}</p>
 
                     {article.publishedAt && (
