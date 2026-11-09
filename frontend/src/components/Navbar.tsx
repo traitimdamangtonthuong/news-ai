@@ -7,17 +7,62 @@ interface NavbarProps {
   onSelectCategory: (categoryId: string) => void;
 }
 
+// Danh sách thứ tự ưu tiên các chuyên mục trên thanh Navigation Bar
+// Bạn có thể dễ dàng thay đổi thứ tự hoặc thêm/bớt chuyên mục tại đây
+const PREFERRED_ROOT_ORDER = [
+  "Tin mới nhất",
+  "Thời sự",
+  "Thế giới",
+  "Kinh doanh",
+  "Bất động sản",
+  "Khoa học công nghệ",
+  "Thể thao",
+  "Giải trí",
+  "Sức khỏe",
+  "Đời sống",
+  "Giáo dục",
+  "Xe",
+  "Du lịch",
+  "Pháp luật",
+  "Góc nhìn",
+  "Tâm sự",
+  "Thư giãn",
+  "Spotlight",
+];
+
+function getCategoryPriority(cat: Category): number {
+  const name = cat.name.toLowerCase().trim();
+  const slug = (cat.slug || "").toLowerCase().trim();
+
+  for (let i = 0; i < PREFERRED_ROOT_ORDER.length; i++) {
+    const target = PREFERRED_ROOT_ORDER[i].toLowerCase().trim();
+    if (name === target || slug === target) {
+      return i;
+    }
+  }
+  return 999;
+}
+
 export default function Navbar({
   categories,
   selectedCategory,
   onSelectCategory,
 }: NavbarProps) {
-  // 1. Lọc danh mục gốc (không có parent)
+  // 1. Lọc và sắp xếp danh mục gốc theo thứ tự ưu tiên
   const rootCategories = useMemo(() => {
-    return categories.filter((c) => !c.parent);
+    return categories
+      .filter((c) => !c.parent)
+      .sort((a, b) => {
+        const pA = getCategoryPriority(a);
+        const pB = getCategoryPriority(b);
+        if (pA !== pB) {
+          return pA - pB;
+        }
+        return a.name.localeCompare(b.name, "vi");
+      });
   }, [categories]);
 
-  // 2. Gom nhóm danh mục con theo parentId
+  // 2. Gom nhóm danh mục con theo parentId và sắp xếp theo A-Z
   const subCategoriesMap = useMemo(() => {
     const map = new Map<number, Category[]>();
     for (const c of categories) {
@@ -26,6 +71,10 @@ export default function Navbar({
         list.push(c);
         map.set(c.parent.id, list);
       }
+    }
+    // Sắp xếp các danh mục con trong popup theo thứ tự chữ cái A-Z
+    for (const list of map.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name, "vi"));
     }
     return map;
   }, [categories]);
@@ -42,7 +91,7 @@ export default function Navbar({
           Trang chủ
         </button>
 
-        {/* Danh sách danh mục cha */}
+        {/* Danh sách danh mục cha theo thứ tự đã sắp xếp */}
         {rootCategories.map((root) => {
           const subs = subCategoriesMap.get(root.id) || [];
           const hasSubs = subs.length > 0;
