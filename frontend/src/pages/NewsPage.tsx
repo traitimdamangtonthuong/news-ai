@@ -1,13 +1,12 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import {
-  getArticleById, //chuyển hàm bên articles qua
+  getArticleById,
   getCategories,
-  getSources,
   searchArticles,
   type Category,
-  type Source,
 } from "../api/articles";
+import Navbar from "../components/Navbar";
 import { extractFirstImageUrl, stripHtmlToText } from "../lib/articleFormat";
 import type { ArticleSearchResponse } from "../types/articles";
 
@@ -19,9 +18,6 @@ export default function NewsPage() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-
-  const [sources, setSources] = useState<Source[]>([]);
-  const [selectedSource, setSelectedSource] = useState<string>("");
 
   const [publishedFrom, setPublishedFrom] = useState<string>("");
   const [publishedTo, setPublishedTo] = useState<string>("");
@@ -35,10 +31,6 @@ export default function NewsPage() {
     getCategories()
       .then(setCategories)
       .catch((err) => console.error("Lỗi tải danh mục:", err));
-
-    getSources()
-      .then(setSources)
-      .catch((err) => console.error("Lỗi tải nguồn báo:", err));
   }, []);
 
   useEffect(() => {
@@ -50,7 +42,6 @@ export default function NewsPage() {
         const result = await searchArticles({
           keyword,
           categoryId: selectedCategory ? Number(selectedCategory) : undefined,
-          sourceId: selectedSource ? Number(selectedSource) : undefined,
           publishedFrom: publishedFrom || undefined,
           publishedTo: publishedTo || undefined,
           page,
@@ -68,7 +59,7 @@ export default function NewsPage() {
     }
 
     loadArticles();
-  }, [keyword, selectedCategory, selectedSource, publishedFrom, publishedTo, page]);
+  }, [keyword, selectedCategory, publishedFrom, publishedTo, page]);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,25 +67,17 @@ export default function NewsPage() {
     setKeyword(inputKeyword);
   }
 
-  function handleResetFilters() {
-    setInputKeyword("");
-    setKeyword("");
-    setSelectedCategory("");
-    setSelectedSource("");
-    setPublishedFrom("");
-    setPublishedTo("");
+  function handleSelectCategory(catId: string) {
+    setSelectedCategory(catId);
     setPage(0);
   }
-  // LẤY ID CỦA BÀI BÁO ĐI XIN LINK, RỒI BẢO TRÌNH DUYỆT BẬT TAB MỚI
-    // Hàm xử lý: Khi bấm vào bài nào, lấy link gốc và mở sang tab mới
+
+  // Khi click vào tiêu đề bài viết, lấy link gốc và mở tab mới
   async function handleOpenArticle(id: number) {
     try {
-      // 1. Gọi hàm bên articles.ts để lấy chi tiết bài viết
       const detail = await getArticleById(id);
-
-      // 2. Nếu có đường link gốc thì mở tab mới
       if (detail.url) {
-        window.open(detail.url, "_blank", "noopener,noreferrer"); //lệnh mở web mới
+        window.open(detail.url, "_blank", "noopener,noreferrer");
       } else {
         alert("Bài viết này không có liên kết gốc!");
       }
@@ -103,65 +86,43 @@ export default function NewsPage() {
       alert("Không thể tải bài viết, vui lòng kiểm tra lại Backend.");
     }
   }
+
   return (
     <main className="news-page">
       <header className="news-header">
-        <p className="eyebrow">NEWS AI</p>
-        <h1>Tin tức mới nhất</h1>
-        <p>Các bài viết được thu thập từ nguồn RSS và lưu trong hệ thống.</p>
+        <div className="header-top">
+          <div className="brand-section">
+            <p className="eyebrow">NEWS AI</p>
+            <h1>Tin tức mới nhất</h1>
+            <p className="subtitle">
+              Tổng hợp tin tức tự động và đa chiều từ các nguồn báo uy tín.
+            </p>
+          </div>
 
-        <section className="filter-panel">
           <form className="search-form" onSubmit={handleSearch}>
             <input
               value={inputKeyword}
               onChange={(e) => setInputKeyword(e.target.value)}
-              placeholder="Tìm kiếm từ khóa trong tiêu đề, mô tả, nội dung..."
+              placeholder="Tìm kiếm từ khóa..."
               aria-label="Từ khóa tìm kiếm"
             />
             <button type="submit">Tìm kiếm</button>
           </form>
+        </div>
 
-          <div className="filter-row">
-            <div className="filter-item">
-              <label htmlFor="cat-select">Chuyên mục:</label>
-              <select
-                id="cat-select"
-                value={selectedCategory}
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setPage(0);
-                }}
-              >
-                <option value="">-- Tất cả chuyên mục --</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* Navigation Bar thay thế hệ thống lọc nguồn báo cũ, hỗ trợ hover subcategory */}
+        <Navbar
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={handleSelectCategory}
+        />
 
-            <div className="filter-item">
-              <label htmlFor="src-select">Nguồn báo:</label>
-              <select
-                id="src-select"
-                value={selectedSource}
-                onChange={(e) => {
-                  setSelectedSource(e.target.value);
-                  setPage(0);
-                }}
-              >
-                <option value="">-- Tất cả nguồn báo --</option>
-                {sources.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-item">
-              <label htmlFor="from-date">Từ ngày:</label>
+        {/* Thanh lọc phụ: Thời gian */}
+        <div className="sub-filter-row">
+          <div className="date-filter-group">
+            <span className="filter-label">Thời gian:</span>
+            <div className="date-input-wrap">
+              <label htmlFor="from-date">Từ</label>
               <input
                 id="from-date"
                 type="date"
@@ -172,9 +133,8 @@ export default function NewsPage() {
                 }}
               />
             </div>
-
-            <div className="filter-item">
-              <label htmlFor="to-date">Đến ngày:</label>
+            <div className="date-input-wrap">
+              <label htmlFor="to-date">Đến</label>
               <input
                 id="to-date"
                 type="date"
@@ -185,22 +145,8 @@ export default function NewsPage() {
                 }}
               />
             </div>
-
-            {(keyword ||
-              selectedCategory ||
-              selectedSource ||
-              publishedFrom ||
-              publishedTo) && (
-              <button
-                type="button"
-                className="reset-btn"
-                onClick={handleResetFilters}
-              >
-                Đặt lại
-              </button>
-            )}
           </div>
-        </section>
+        </div>
       </header>
 
       {loading && <p className="status">Đang tải bài viết...</p>}
@@ -249,11 +195,9 @@ export default function NewsPage() {
                       )}
                     </div>
 
-                    <h2 
-                      className="article-title" 
-                      onClick={() => handleOpenArticle(article.id)} //KHI CLICK VÀO ĐÂY THÌ HÃY
-                                                                    // CHẠY HÀM handleOpenArticle 
-                                                                    // VỚI MÃ SỐ CỦA BÀI BÁO NÀY
+                    <h2
+                      className="article-title"
+                      onClick={() => handleOpenArticle(article.id)}
                       title="Bấm để đọc bài báo gốc"
                     >
                       {article.title}
