@@ -41,111 +41,87 @@ export default function NewsPage({
   }, [initialCategory]);
 
   useEffect(() => {
-    getCategories()
-      .then(setCategories)
-      .catch((err) => console.error("Lỗi tải danh mục:", err));
-  }, []);
-
-  useEffect(() => {
-    async function loadArticles() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const result = await searchArticles({
-          keyword,
-          categoryId: selectedCategory ? Number(selectedCategory) : undefined,
-          publishedFrom: publishedFrom || undefined,
-          publishedTo: publishedTo || undefined,
-          page,
-          size: PAGE_SIZE,
+    window.scrollTo(0, 0);
+    if (id) {
+      setLoading(true);
+      Promise.all([
+        NewsAPI.getArticle(Number(id)),
+        NewsAPI.searchArticles({ page: 0, size: 6 })
+      ])
+        .then(([articleData, searchData]) => {
+          setArticle(articleData);
+          setTopArticles(searchData.items.filter((item: Article) => item.id !== Number(id)));
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error("Lỗi lấy chi tiết bài báo:", err);
+          setError('Không thể tải nội dung bài viết.');
+          setLoading(false);
         });
-
-        setData(result);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Đã có lỗi không xác định.",
-        );
-      } finally {
-        setLoading(false);
-      }
     }
+  }, [id]);
 
-    loadArticles();
-  }, [keyword, selectedCategory, publishedFrom, publishedTo, page]);
-
-  function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPage(0);
-    setKeyword(inputKeyword);
-  }
-
-  function handleSelectCategory(catId: string) {
-    setSelectedCategory(catId);
-    setPage(0);
+  if (loading) {
+    return (
+      <div className="article-detail-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#2563eb', width: '36px', height: '36px' }} />
+        <p style={{ fontSize: '14px', fontWeight: 500, color: '#64748b', marginTop: '12px' }}>Đang tải nội dung bài báo...</p>
+      </div>
+    );
   }
 
   return (
-    <main className="news-page">
-      <header className="news-header">
-        <div className="header-top">
-          <div className="brand-section">
-            <p className="eyebrow">NEWS AI</p>
-            <h1>Tin tức mới nhất</h1>
-            <p className="subtitle">
-              Tổng hợp tin tức tự động và đa chiều từ các nguồn báo uy tín.
-            </p>
-          </div>
-
-          <form className="search-form" onSubmit={handleSearch}>
-            <input
-              value={inputKeyword}
-              onChange={(e) => setInputKeyword(e.target.value)}
-              placeholder="Tìm kiếm từ khóa..."
-              aria-label="Từ khóa tìm kiếm"
-            />
-            <button type="submit">Tìm kiếm</button>
-          </form>
+    <div className="article-detail-wrapper">
+      <div className="article-detail-container">
+        
+        {/* Nút quay lại */}
+        <div className="article-back-bar">
+          <Link to="/" className="article-back-btn">
+            <ArrowLeft size={16} /> Quay lại bảng tin
+          </Link>
         </div>
 
-        {/* Navigation Bar thay thế hệ thống lọc nguồn báo cũ, hỗ trợ hover subcategory */}
-        <Navbar
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={handleSelectCategory}
-        />
+        {/* Bố cục 2 cột chuẩn báo chí */}
+        <div className="article-main-grid">
+          
+          {/* CỘT TRÁI: Nội dung chính */}
+          <main className="article-content-card">
+            
+            <header className="article-header-section">
+              <div className="article-meta-tags">
+                <span className="article-cat-badge">
+                  {article.category?.name || 'Tin tức'}
+                </span>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <span className="article-source-name">{article.source?.name}</span>
+              </div>
 
-        {/* Thanh lọc phụ: Thời gian */}
-        <div className="sub-filter-row">
-          <div className="date-filter-group">
-            <span className="filter-label">Thời gian:</span>
-            <div className="date-input-wrap">
-              <label htmlFor="from-date">Từ</label>
-              <input
-                id="from-date"
-                type="date"
-                value={publishedFrom}
-                onChange={(e) => {
-                  setPublishedFrom(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
-            <div className="date-input-wrap">
-              <label htmlFor="to-date">Đến</label>
-              <input
-                id="to-date"
-                type="date"
-                value={publishedTo}
-                onChange={(e) => {
-                  setPublishedTo(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </header>
+              <h1 className="article-title-main">
+                {article.title}
+              </h1>
+
+              <p className="article-desc-lead">
+                {article.description}
+              </p>
+
+              <div className="article-info-bar">
+                <div className="article-date-box">
+                  <Clock size={16} style={{ color: '#2563eb' }} />
+                  <span>Đăng ngày: {article.publishedAt ? new Date(article.publishedAt).toLocaleString('vi-VN') : 'Hôm nay'}</span>
+                </div>
+
+                {article.url && (
+                  <a 
+                    href={article.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="article-original-link"
+                  >
+                    Xem bài gốc <ExternalLink size={14} />
+                  </a>
+                )}
+              </div>
+            </header>
 
       {loading && <p className="status">Đang tải bài viết...</p>}
 
@@ -213,32 +189,13 @@ export default function NewsPage({
                       </time>
                     )}
                   </div>
-                </article>
-              );
-            })}
-          </section>
+                </Link>
+              ))}
+            </div>
+          </aside>
 
-          <nav className="pagination" aria-label="Phân trang">
-            <button
-              type="button"
-              disabled={page === 0}
-              onClick={() => setPage((current) => Math.max(0, current - 1))}
-            >
-              Trang trước
-            </button>
-            <span>
-              Trang {data.page + 1} / {Math.max(1, data.totalPages)}
-            </span>
-            <button
-              type="button"
-              disabled={data.page + 1 >= data.totalPages}
-              onClick={() => setPage((current) => current + 1)}
-            >
-              Trang sau
-            </button>
-          </nav>
-        </>
-      )}
-    </main>
+        </div>
+      </div>
+    </div>
   );
 }
