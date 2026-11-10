@@ -28,25 +28,25 @@ export type SearchParams = {
   size?: number;
 };
 
-// 1. Lấy danh sách chuyên mục từ GET /api/categories
+// 1. Láº¥y danh sÃ¡ch chuyÃªn má»¥c tá»« GET /api/categories
 export async function getCategories(): Promise<Category[]> {
   const response = await fetch("/api/categories");
   if (!response.ok) {
-    throw new Error("Không thể tải danh sách chuyên mục");
+    throw new Error("KhÃ´ng thá»ƒ táº£i danh sÃ¡ch chuyÃªn má»¥c");
   }
   return response.json();
 }
 
-// 2. Lấy danh sách nguồn báo từ GET /api/sources
+// 2. Láº¥y danh sÃ¡ch nguá»“n bÃ¡o tá»« GET /api/sources
 export async function getSources(): Promise<Source[]> {
   const response = await fetch("/api/sources");
   if (!response.ok) {
-    throw new Error("Không thể tải danh sách nguồn báo");
+    throw new Error("KhÃ´ng thá»ƒ táº£i danh sÃ¡ch nguá»“n bÃ¡o");
   }
   return response.json();
 }
 
-// 3. Tìm kiếm bài viết kết hợp đa bộ lọc
+// 3. TÃ¬m kiáº¿m bÃ i viáº¿t káº¿t há»£p Ä‘a bá»™ lá»c
 export async function searchArticles(
   params: SearchParams,
 ): Promise<ArticleSearchResponse> {
@@ -78,12 +78,12 @@ export async function searchArticles(
   const response = await fetch(`/api/articles/search?${query.toString()}`);
 
   if (!response.ok) {
-    throw new Error(`Không thể tải bài viết. HTTP ${response.status}`);
+    throw new Error(`KhÃ´ng thá»ƒ táº£i bÃ i viáº¿t. HTTP ${response.status}`);
   }
 
   return response.json();
 }
-// Kiểu dữ liệu chi tiết của một bài viết (có chứa link url gốc)
+// Kiểu dữ liệu chi tiết của bài viết đầy đủ content, media, nguồn và danh mục
 export type ArticleDetail = {
   id: number;
   title: string;
@@ -92,13 +92,33 @@ export type ArticleDetail = {
   url: string;
   imageUrl: string | null;
   publishedAt: string | null;
+  source?: {
+    id: number;
+    name: string;
+    baseUrl?: string;
+  };
+  category?: {
+    id: number;
+    name: string;
+    slug?: string;
+    parent?: {
+      id: number;
+      name: string;
+      slug?: string;
+    } | null;
+  } | null;
+  subCategory?: {
+    id: number;
+    name: string;
+    slug?: string;
+  } | null;
 };
 
-// 4. Lấy chi tiết bài viết theo ID (để lấy link báo gốc url)
+// 4. Láº¥y chi tiáº¿t bÃ i viáº¿t theo ID (Ä‘á»ƒ láº¥y link bÃ¡o gá»‘c url)
 export async function getArticleById(id: number): Promise<ArticleDetail> {
   const response = await fetch(`/api/articles/${id}`);
   if (!response.ok) {
-    throw new Error(`Không thể lấy chi tiết bài viết ID ${id}`);
+    throw new Error(`KhÃ´ng thá»ƒ láº¥y chi tiáº¿t bÃ i viáº¿t ID ${id}`);
   }
   return response.json();
 }
