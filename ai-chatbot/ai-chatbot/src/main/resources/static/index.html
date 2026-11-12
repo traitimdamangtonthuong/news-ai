@@ -145,13 +145,14 @@ function renderBotAnswer(el, data) {
   if (data.citations && data.citations.length > 0) {
     const box = document.createElement('div');
     box.className = 'citations';
-    data.citations.forEach(c => {
+    data.citations.forEach((c, i) => {
       const row = document.createElement('div');
       const a = document.createElement('a');
       a.href = c.url;
       a.target = '_blank';
       a.rel = 'noopener';
-      a.textContent = '[' + c.sourceName + '] ' + c.title;
+      a.textContent = '[' + (i + 1) + '] ' + c.title + ' — ' + c.sourceName
+        + (c.publishedAt ? ' (' + c.publishedAt + ')' : '');
       row.appendChild(a);
       box.appendChild(row);
     });

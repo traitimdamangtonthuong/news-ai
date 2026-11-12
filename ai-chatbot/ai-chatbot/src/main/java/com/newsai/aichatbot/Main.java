@@ -30,7 +30,7 @@ import com.newsai.aichatbot.web.ChatHttpServer;
  *   java -jar target\ai-chatbot-0.1.0.jar --cli
  *
  * Tuy chinh qua bien moi truong (xem ChatbotConfig):
- *   NEWS_AI_BASE_URL, NEWS_AI_TOP_K, CHATBOT_PORT, LLM_API_KEY (tuy chon).
+ *   NEWS_AI_BASE_URL, NEWS_AI_TOP_K, CHATBOT_PORT, LLM_API_KEY (tuy chon), LLM_MODEL (tuy chon).
  */
 public final class Main {
 
@@ -43,7 +43,10 @@ public final class Main {
 
         // Dung LLM (Gemini) neu da co LLM_API_KEY; neu chua thi tu dong fallback
         // sang ExtractiveArticleSummarizer ben trong LlmArticleSummarizer.
-        ArticleSummarizer summarizer = new LlmArticleSummarizer(config.llmApiKey());
+        ArticleSummarizer summarizer = new LlmArticleSummarizer(config.llmApiKey(), config.llmModel());
+        System.out.println(config.hasLlmApiKey()
+                ? "Tom tat    : Gemini (tu dong dung ban trich cau neu Gemini loi)"
+                : "Tom tat    : trich cau (extractive), khong can API key");
 
         NewsChatbotService chatbot = new NewsChatbotService(apiClient, summarizer, config.topK());
 
@@ -106,8 +109,10 @@ public final class Main {
         System.out.println(answer.summary());
         if (answer.hasCitations()) {
             System.out.println("\nNguon:");
+            int n = 1;
             for (Citation c : answer.citations()) {
-                System.out.println("  [" + c.articleId() + "] " + c.title() + " - " + c.sourceName() + " - " + c.url());
+                System.out.println("  [" + n++ + "] " + c.title() + " - " + c.sourceName()
+                        + (c.publishedAt() != null ? " - " + c.publishedAt() : "") + " - " + c.url());
             }
         }
         System.out.println();

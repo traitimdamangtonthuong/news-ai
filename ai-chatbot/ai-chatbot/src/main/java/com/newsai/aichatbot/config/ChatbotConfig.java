@@ -13,6 +13,7 @@ package com.newsai.aichatbot.config;
  *                          tích hợp LLM sau này (xem service/LlmArticleSummarizer.java).
  *                          Không đặt giá trị mặc định trong code; nếu không set thì
  *                          chatbot tự dùng ExtractiveArticleSummarizer (không cần key).
+ *  - LLM_MODEL          : (tuỳ chọn) tên model Gemini, mặc định xem LlmArticleSummarizer.DEFAULT_MODEL
  */
 public final class ChatbotConfig {
 
@@ -20,12 +21,14 @@ public final class ChatbotConfig {
     private final int topK;
     private final int port;
     private final String llmApiKey; // có thể null
+    private final String llmModel;  // có thể null -> dùng model mặc định
 
-    private ChatbotConfig(String baseUrl, int topK, int port, String llmApiKey) {
+    private ChatbotConfig(String baseUrl, int topK, int port, String llmApiKey, String llmModel) {
         this.baseUrl = baseUrl;
         this.topK = topK;
         this.port = port;
         this.llmApiKey = llmApiKey;
+        this.llmModel = llmModel;
     }
 
     public static ChatbotConfig fromEnvironment() {
@@ -33,7 +36,8 @@ public final class ChatbotConfig {
         int topK = parseIntOrDefault(System.getenv("NEWS_AI_TOP_K"), 5);
         int port = parseIntOrDefault(System.getenv("CHATBOT_PORT"), 8081);
         String llmApiKey = System.getenv("LLM_API_KEY"); // null nếu chưa cấu hình
-        return new ChatbotConfig(stripTrailingSlash(baseUrl), Math.max(1, topK), port, llmApiKey);
+        String llmModel = System.getenv("LLM_MODEL"); // null nếu chưa cấu hình
+        return new ChatbotConfig(stripTrailingSlash(baseUrl), Math.max(1, topK), port, llmApiKey, llmModel);
     }
 
     private static int parseIntOrDefault(String raw, int fallback) {
@@ -69,5 +73,9 @@ public final class ChatbotConfig {
 
     public String llmApiKey() {
         return llmApiKey;
+    }
+
+    public String llmModel() {
+        return llmModel;
     }
 }
