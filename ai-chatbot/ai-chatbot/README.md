@@ -27,18 +27,24 @@ ai-chatbot/                     # module Maven riêng, KHÔNG nằm trong news-a
 └── src/main/java/com/newsai/aichatbot/
     ├── Main.java                          # entry point: mặc định mở web chat, có chế độ --cli
     ├── config/ChatbotConfig.java          # đọc cấu hình từ biến môi trường
+    ├── client/NewsApi.java                # hợp đồng với backend (interface, dễ kiểm thử)
     ├── client/NewsApiClient.java          # gọi REST API backend qua HTTP
+    ├── client/SearchRequest.java          # tham số của /api/articles/search
     ├── client/NewsApiException.java
     ├── client/dto/                        # DTO khớp JSON response của backend
-    ├── model/                             # ArticleContext, Citation, ChatAnswer
+    ├── model/                             # ArticleContext, Citation, ChatAnswer, SearchPlan
+    ├── text/
+    │   ├── HtmlCleaner.java               # làm sạch HTML của cột content (thẻ, ảnh, chú thích)
+    │   └── TextUtils.java                 # bỏ dấu, tách câu, giải mã entity
     ├── web/
     │   ├── ChatHttpServer.java            # HTTP server tối giản (com.sun.net.httpserver)
     │   └── ChatRequestDto.java            # body JSON của POST /api/chat
     └── service/
-        ├── KeywordExtractor.java          # tách 1 keyword từ câu hỏi
+        ├── QueryAnalyzer.java             # câu hỏi -> từ khoá, khoảng ngày, tên báo, chuyên mục
+        ├── RelevanceScorer.java           # chấm điểm bài báo theo nguyên từ (tiêu đề > mô tả > nội dung)
         ├── ArticleSummarizer.java         # interface tổng hợp (dễ hoán đổi)
         ├── ExtractiveArticleSummarizer.java  # mặc định, không cần API key
-        ├── LlmArticleSummarizer.java      # stub để cắm LLM thật sau này
+        ├── LlmArticleSummarizer.java      # Gemini qua REST, tự rơi về extractive nếu lỗi
         └── NewsChatbotService.java        # điều phối toàn bộ luồng
 ```
 
@@ -91,6 +97,7 @@ ai-chatbot/                     # module Maven riêng, KHÔNG nằm trong news-a
 | `NEWS_AI_TOP_K`    | Số bài báo tối đa lấy làm ngữ cảnh mỗi câu hỏi       | `5`                      |
 | `CHATBOT_PORT`     | Cổng chạy giao diện web chat                        | `8081`                   |
 | `LLM_API_KEY`      | (Tuỳ chọn) API key cho LLM thật, nếu đã tích hợp     | không đặt                |
+| `LLM_MODEL`        | (Tuỳ chọn) tên model Gemini                          | `gemini-3.8-flash`       |
 
 Ví dụ (PowerShell):
 
@@ -102,20 +109,40 @@ java -jar target/ai-chatbot-0.1.0.jar
 
 Không commit `LLM_API_KEY` hay bất kỳ key thật nào vào Git.
 
-## Cách hoạt động (bản đầu, chưa dùng LLM)
+## Cách hoạt động
 
 ```text
 Câu hỏi
-  → KeywordExtractor: chọn 1 từ khoá nổi bật nhất
-  → NewsApiClient: GET /api/articles/search?keyword=...
-  → NewsApiClient: GET /api/articles/{id} để lấy full content từng bài
-  → ExtractiveArticleSummarizer: chấm điểm câu theo tần suất từ, chọn câu tiêu biểu
-  → Trả lời kèm trích dẫn: id, tiêu đề, nguồn, URL bài gốc
+  → QueryAnalyzer: từ khoá + khoảng ngày ("hôm nay", "tuần này", "ngày 2/11"...)
+                   + tên báo ("VnExpress") + chuyên mục ("thể thao")
+  → NewsApiClient: GET /api/articles/search cho lần lượt: cả cụm → cặp từ → từ đơn
+  → Xếp hạng sơ bộ theo tiêu đề/mô tả, GET /api/articles/{id} cho các bài tốt nhất
+  → HtmlCleaner: bỏ thẻ HTML, ảnh, chú thích, chữ ký tác giả; chấm điểm lại theo toàn văn
+  → Summarizer (extractive mặc định, hoặc Gemini nếu có LLM_API_KEY)
+  → Trả lời đánh số [1], [2]... kèm trích dẫn: id, tiêu đề, nguồn, ngày, URL bài gốc
 ```
 
-`ExtractiveArticleSummarizer` là thuật toán tóm tắt tự viết (không gọi API
-ngoài, không cần internet, không tốn phí) — đủ để chạy demo và nộp bài tập
-lớn. Chất lượng tất nhiên không bằng LLM thật.
+Những điểm đáng chú ý:
+
+- **Cột `content` do crawler lưu là HTML** (`<p>`, `<figure>`, `<img>`...). `HtmlCleaner` làm
+  sạch trước khi tóm tắt để câu trả lời không lẫn thẻ HTML hay chú thích ảnh.
+- **Backend chỉ có `LIKE '%keyword%'` một chuỗi, phân biệt dấu** (xem README gốc), nên chatbot
+  gửi nhiều truy vấn ứng viên rồi tự lọc/xếp hạng theo **nguyên từ**. Nhờ vậy `AI` không bị
+  khớp nhầm "hai", "bài"; `bão` không khớp "bảo"; viết hoa `AI` không khớp "ai" (= who).
+- **Lọc theo thời gian** dùng đúng tham số `publishedFrom`/`publishedTo` của backend. Nếu không
+  có bài nào trong khoảng đó, chatbot báo rõ rồi trả các bài gần nhất thay vì im lặng.
+- **Tên báo** (phần trước " - " của tên source, vd. `VnExpress`) được lọc ở phía chatbot vì mỗi
+  feed là một `sourceId` riêng. **Chuyên mục** chỉ dùng làm bộ lọc khi câu hỏi thuần là xem một
+  chuyên mục (vd. "tin thể thao"); còn lại tên chuyên mục được coi là từ khoá thường.
+- Câu hỏi không có từ khoá ("tin mới nhất", "tin hôm nay") trả các bài mới nhất.
+- Câu hỏi gõ không dấu vẫn tìm được: nếu backend không có kết quả (vì khớp theo dấu), chatbot
+  quét các bài mới nhất rồi lọc cục bộ bỏ dấu.
+- Nếu không bài nào đủ liên quan, chatbot trả lời "không tìm thấy" thay vì liệt kê bài không liên quan.
+
+`ExtractiveArticleSummarizer` là thuật toán tóm tắt tự viết (không gọi API ngoài, không cần
+internet, không tốn phí): với mỗi bài lấy mô tả của toà soạn làm câu mở đầu, cộng 1-2 câu có
+điểm cao nhất (tần suất từ nổi bật + từ khoá của câu hỏi + vị trí đầu bài), bỏ câu trùng ý. Chất
+lượng tất nhiên không bằng LLM thật.
 
 ## Dùng LLM thật (Google Gemini) để tóm tắt
 
@@ -147,13 +174,14 @@ còn trích nguyên câu):
 
 ## Giới hạn đã biết (ghi rõ để nhóm không bất ngờ)
 
-- Backend hiện tìm theo `LIKE '%keyword%'` với **một** chuỗi duy nhất, không
-  phải tìm kiếm đa từ khoá thật sự — nên `KeywordExtractor` chỉ chọn 1 từ
-  nổi bật nhất từ câu hỏi. Nếu câu hỏi không khớp từ nào có trong bài báo đã
-  crawl, chatbot sẽ báo không tìm thấy.
-- Tóm tắt extractive mặc định chỉ trích câu có sẵn trong bài báo, không tự
-  diễn đạt lại như LLM thật.
+- Backend tìm theo chuỗi con (`LIKE`) nên chatbot không tìm theo nghĩa: câu hỏi dùng từ khác với
+  bài báo (đồng nghĩa) có thể không ra kết quả. Từ khoá rất ngắn như `AI` chỉ được quét trong
+  ~200 bài mới nhất.
+- Tên báo được nhận diện từ danh sách `/api/sources`; chuyên mục từ `/api/categories` (cache 10 phút).
+- Tóm tắt extractive chỉ trích câu có sẵn trong bài báo, không tự diễn đạt lại như LLM thật.
 - Không có bộ nhớ hội thoại nhiều lượt (mỗi câu hỏi xử lý độc lập).
+- Tên model Gemini mặc định là `gemini-3.8-flash`; nếu Google đổi tên model, đặt biến `LLM_MODEL`
+  (không cần sửa code). Khi Gemini lỗi, chatbot tự dùng bản extractive.
 
-Những giới hạn này khớp với lộ trình "retrieval cơ bản trước, LLM/embeddings
-sau" đã ghi trong README của backend.
+Những giới hạn này khớp với lộ trình "retrieval cơ bản trước, LLM/embeddings sau" đã ghi trong
+README của backend.
