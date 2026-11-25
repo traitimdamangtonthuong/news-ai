@@ -49,7 +49,8 @@ public final class QueryAnalyzer {
             "mà", "nên", "vì", "bởi", "nếu", "xem", "đọc", "tìm", "hỏi", "ai", "em",
             "anh", "chị", "ạ", "nhé", "nha", "giùm", "dùm", "thử", "khi", "lúc", "còn",
             "cũng", "rất", "hơn", "nữa", "đều", "này", "đấy", "vậy", "thôi", "bài",
-            "tuần", "tháng", "ngày", "năm", "ông", "bà", "trên", "dưới");
+            "tuần", "tháng", "ngày", "năm", "ông", "bà", "trên", "dưới",
+            "bào", "bải", "bạo", "tổng", "hợp");
     private static final Set<String> STOP_EN = Set.of(
             "the", "a", "an", "is", "are", "of", "in", "on", "for", "and", "to", "about",
             "what", "how", "summarize", "summarise", "summary", "please", "tell", "me", "give",

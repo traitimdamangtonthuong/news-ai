@@ -49,9 +49,13 @@ export default function Navbar({
   onSelectCategory,
 }: NavbarProps) {
   // 1. Lọc và sắp xếp danh mục gốc theo thứ tự ưu tiên
+  // 1. Lọc và sắp xếp danh mục gốc theo thứ tự ưu tiên
   const rootCategories = useMemo(() => {
     return categories
-      .filter((c) => !c.parent)
+      .filter((c) => {
+        const isPreferred = getCategoryPriority(c) !== 999;
+        return !c.parent || isPreferred;
+      })
       .sort((a, b) => {
         const pA = getCategoryPriority(a);
         const pB = getCategoryPriority(b);
@@ -66,13 +70,14 @@ export default function Navbar({
   const subCategoriesMap = useMemo(() => {
     const map = new Map<number, Category[]>();
     for (const c of categories) {
-      if (c.parent?.id) {
+      // Không đưa các mục đã được đôn lên thanh Navbar chính vào menu con nữa
+      const isPreferred = getCategoryPriority(c) !== 999;
+      if (c.parent?.id && !isPreferred) {
         const list = map.get(c.parent.id) || [];
         list.push(c);
         map.set(c.parent.id, list);
       }
     }
-    // Sắp xếp các danh mục con trong popup theo thứ tự chữ cái A-Z
     for (const list of map.values()) {
       list.sort((a, b) => a.name.localeCompare(b.name, "vi"));
     }

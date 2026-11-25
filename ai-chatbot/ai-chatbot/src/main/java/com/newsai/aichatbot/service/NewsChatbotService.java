@@ -43,7 +43,7 @@ public class NewsChatbotService {
     private static final long CATALOG_TTL_MS = 10 * 60_000L;
     private static final long CATALOG_RETRY_MS = 60_000L;
     private static final int NOISY_SCAN_PAGES = 4;
-    private static final double MIN_COVERAGE = 0.7; // tỉ lệ (có trọng số) từ khoá phải xuất hiện trong bài
+    private static final double MIN_COVERAGE = 0.5; // tỉ lệ (có trọng số) từ khoá phải xuất hiện trong bài
     private static final DateTimeFormatter DMY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private record Catalog(List<NamedItemDto> sources, List<NamedItemDto> categories, long expiresAt) {
@@ -120,6 +120,33 @@ public class NewsChatbotService {
         return new ChatAnswer(note == null ? summary : note + "\n\n" + summary, citations);
     }
 
+    public ChatAnswer answer(String question, Long articleId) {
+        if (articleId == null) {
+            return answer(question);
+        }
+
+        List<ArticleDetailDto> details = api.getArticlesByIds(List.of(articleId));
+        if (details == null || details.isEmpty()) {
+            return new ChatAnswer(
+                    "Không tìm thấy nội dung bài báo (ID: " + articleId + ") trong cơ sở dữ liệu.",
+                    List.of());
+        }
+
+        ArticleContext ctx = toContext(details.get(0));
+        Citation citation = new Citation(
+                ctx.id(),
+                ctx.title(),
+                ctx.sourceName(),
+                ctx.url(),
+                ctx.publishedAt() == null ? null : ctx.publishedAt().format(DMY));
+
+        String effectiveQuestion = (question == null || question.isBlank())
+                ? "Hãy tóm tắt chi tiết nội dung chính của bài báo này."
+                : question;
+
+        String summary = summarizer.summarize(effectiveQuestion, List.of(ctx));
+        return new ChatAnswer(summary, List.of(citation));
+    }
     // ------------------------------------------------------------------ retrieval
 
     /**

@@ -78,7 +78,7 @@ export async function searchArticles(
   const response = await fetch(`/api/articles/search?${query.toString()}`);
 
   if (!response.ok) {
-    throw new Error(`KhÃ´ng thá»ƒ táº£i bÃ i viáº¿t. HTTP ${response.status}`);
+    throw new Error(`Không thể tải. HTTP ${response.status}`);
   }
 
   return response.json();
@@ -118,7 +118,7 @@ export type ArticleDetail = {
 export async function getArticleById(id: number): Promise<ArticleDetail> {
   const response = await fetch(`/api/articles/${id}`);
   if (!response.ok) {
-    throw new Error(`KhÃ´ng thá»ƒ láº¥y chi tiáº¿t bÃ i viáº¿t ID ${id}`);
+    throw new Error(`Không thể lấy chi tiết bài viểt. ID ${id}`);
   }
   return response.json();
 }

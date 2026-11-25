@@ -5,11 +5,17 @@ import type { ChatAnswer } from "../types/chatbot";
 const chatbotApiUrl =
   import.meta.env.VITE_CHATBOT_API_URL ?? "/chatbot-api/chat";
 
-export async function askChatbot(question: string): Promise<ChatAnswer> {
+export async function askChatbot(
+  question: string,
+  articleId?: number | null
+): Promise<ChatAnswer> {
   const response = await fetch(chatbotApiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json; charset=utf-8" },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({
+      question,
+      articleId: articleId ?? null,
+    }),
   });
 
   if (!response.ok) {

@@ -2,7 +2,7 @@
 
 News AI là dự án tổng hợp tin tức phục vụ bài tập lớn. Hệ thống thu thập bài viết từ RSS/Atom feed, chuẩn hóa và lưu dữ liệu vào PostgreSQL, cung cấp REST API cho giao diện đọc tin và tạo nền dữ liệu cho chatbot/RAG trong giai đoạn sau.
 
-> Trạng thái hiện tại: backend, database, RSS crawler, article search và News page React cơ bản đã có. AI chatbot/RAG chưa được triển khai.
+> Trạng thái hiện tại: backend, database, RSS crawler, article search/detail và News page React đã hoàn thiện. Module AI chatbot độc lập đã sẵn sàng chạy tại cổng 8081 và tích hợp widget chat trực tiếp trên web.
 
 ## Mục lục
 
@@ -13,6 +13,7 @@ News AI là dự án tổng hợp tin tức phục vụ bài tập lớn. Hệ t
 - [Chạy backend và database](#chạy-backend-và-database)
 - [Import dữ liệu seed vào PostgreSQL local](#import-dữ-liệu-seed-vào-postgresql-local)
 - [Chạy frontend](#chạy-frontend)
+- [Chạy AI Chatbot](#chạy-ai-chatbot)
 - [API và dữ liệu crawl](#api-và-dữ-liệu-crawl)
 - [Kiểm thử](#kiểm-thử)
 - [Cấu trúc mã nguồn](#cấu-trúc-mã-nguồn)
@@ -23,11 +24,11 @@ News AI là dự án tổng hợp tin tức phục vụ bài tập lớn. Hệ t
 
 | Thành phần | Công nghệ | Trách nhiệm |
 | --- | --- | --- |
-| Backend | Java 25, Spring Boot 4, Spring Data JPA, Hibernate | REST API, nghiệp vụ, validation, crawler, xử lý lỗi |
-| Database | PostgreSQL | Lưu `articles`, `sources`, `categories` |
-| Frontend | React, TypeScript, Vite | News page, search, phân trang, article detail trong tương lai |
-| Crawler | ROME (RSS 2.0/Atom) | Tải feed, parse, chuẩn hóa URL, upsert article |
-| AI chatbot | Chưa triển khai | Sẽ dùng dữ liệu article đã crawl để retrieval/RAG |
+| Backend | Java 25, Spring Boot 4, Spring Data JPA, Hibernate | REST API, nghiệp vụ, validation, crawler, xử lý lỗi (cổng 8080) |
+| Database | PostgreSQL | Lưu `articles`, `sources`, `categories` (cổng 5728) |
+| Frontend | React, TypeScript, Vite | News page, Navbar phân cấp, search, article detail, AI chat widget (cổng 5173) |
+| Crawler | ROME (RSS 2.0/Atom) + Jsoup HTML scraper | Tải feed, parse, cào chi tiết bài báo, chuẩn hóa URL, upsert article |
+| AI Chatbot | Java HTTP Server + Query Analyzer + Gemini / Extractive | Module độc lập (cổng 8081) trả lời câu hỏi và trích dẫn bài báo |
 
 Mục tiêu trước mắt không phải crawl càng nhiều càng tốt, mà là đảm bảo dữ liệu crawl về có cấu trúc, truy vấn được, hiển thị được và sẵn sàng làm ngữ cảnh cho chatbot sau này.
 
@@ -361,6 +362,61 @@ Mở URL Vite in trong terminal, thường là `http://localhost:5173`.
 1. Kiểm tra `GET http://localhost:8080/api/status` thành công.
 2. Kiểm tra `GET http://localhost:8080/api/articles/search?page=0&size=20` thành công.
 3. Mở frontend, xem DevTools > Network nếu News page không tải được.
+
+## Chạy AI Chatbot
+
+Module `ai-chatbot` là một service Java độc lập, phục vụ REST API `/api/chat` tại cổng **8081** và cung cấp cả giao diện web chat độc lập lẫn tích hợp vào widget chat trên trang tin tức.
+
+### 1. Điều kiện tiên quyết
+- Backend Spring Boot (`http://localhost:8080`) đang chạy với dữ liệu bài viết đã crawl.
+- Đã cài đặt JDK (21 hoặc 25).
+
+### 2. Build và khởi chạy Chatbot Service
+
+Mở terminal riêng (PowerShell):
+
+```powershell
+cd D:\PRJ\news-ai\ai-chatbot\ai-chatbot
+
+# Build file JAR thực thi
+.\mvnw.cmd package -DskipTests
+
+# Chạy chatbot (mặc định dùng bộ trích xuất câu extractive, không cần API key)
+java -jar target\ai-chatbot-0.1.0.jar
+```
+
+*(Trên macOS/Linux: dùng `./mvnw package -DskipTests` và `java -jar target/ai-chatbot-0.1.0.jar`)*
+
+Khi khởi động thành công, console sẽ hiển thị:
+```text
+=== News AI Chatbot (web) ===
+Backend  : http://localhost:8080
+Chat UI  : http://localhost:8081
+Mo duong link tren bang trinh duyet de chat.
+```
+
+### 3. Tùy chọn cấu hình (Biến môi trường)
+
+Bạn có thể truyền các biến môi trường trước khi chạy `java -jar`:
+
+```powershell
+# Chạy với Google Gemini LLM thực tế
+$env:LLM_API_KEY="AIzaSy..."
+$env:LLM_MODEL="gemini-2.5-flash"
+
+# (Tùy chọn) Đổi cổng hoặc số bài báo tối đa làm ngữ cảnh
+$env:CHATBOT_PORT="8081"
+$env:NEWS_AI_TOP_K="5"
+
+java -jar target\ai-chatbot-0.1.0.jar
+```
+
+*Nếu không đặt `LLM_API_KEY`, chatbot sẽ tự động chuyển sang chế độ **Extractive Summarization** (trích xuất nội dung trực tiếp từ các bài báo liên quan nhất) mà không cần mạng ngoài.*
+
+### 4. Cách sử dụng Chatbot
+- **Giao diện web riêng của Chatbot**: Mở trình duyệt vào `http://localhost:8081`.
+- **Giao diện popup trên trang báo**: Mở frontend `http://localhost:5173`, nhấn nút **"✦ Hỏi AI"** ở thanh tìm kiếm hoặc nút nổi **"✦ Hỏi AI Chatbot"** ở góc dưới bên phải màn hình.
+- **Chế độ dòng lệnh (CLI)**: Chạy `java -jar target\ai-chatbot-0.1.0.jar --cli`.
 
 ## API và dữ liệu crawl
 

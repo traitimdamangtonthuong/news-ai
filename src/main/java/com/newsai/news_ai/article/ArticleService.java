@@ -1,5 +1,12 @@
 package com.newsai.news_ai.article;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Queue;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -301,8 +308,10 @@ public class ArticleService {
             throw new IllegalArgumentException("publishedFrom must be before publishedTo.");
         }
 
+        List<Long> categoryIds = collectDescendantCategoryIds(categoryId);
+
         Page<Article> results = articleRepository.findAll(
-                searchSpecification(normalizeKeyword(keyword), sourceId, categoryId, from, to),
+                searchSpecification(normalizeKeyword(keyword), sourceId, categoryIds, from, to),
                 PageRequest.of(page, size,
                         Sort.by(Sort.Order.desc("publishedAt"), Sort.Order.desc("id"))));
 
@@ -340,10 +349,32 @@ public class ArticleService {
      * {@code :parameter IS NULL OR ...} JPQL pattern, for which PostgreSQL
      * cannot infer a type when an optional parameter is null.
      */
+    private List<Long> collectDescendantCategoryIds(Long rootCategoryId) {
+        if (rootCategoryId == null) {
+            return null;
+        }
+        List<Category> allCategories = categoryRepository.findAll();
+        List<Long> ids = new ArrayList<>();
+        Queue<Long> queue = new ArrayDeque<>();
+        ids.add(rootCategoryId);
+        queue.add(rootCategoryId);
+
+        while (!queue.isEmpty()) {
+            Long currentId = queue.poll();
+            for (Category c : allCategories) {
+                if (c.getParent() != null && Objects.equals(c.getParent().getId(), currentId)) {
+                    ids.add(c.getId());
+                    queue.add(c.getId());
+                }
+            }
+        }
+        return ids;
+    }
+
     private Specification<Article> searchSpecification(
             String keyword,
             Long sourceId,
-            Long categoryId,
+            List<Long> categoryIds,
             LocalDateTime publishedFrom,
             LocalDateTime publishedTo) {
         return (root, query, criteriaBuilder) -> {
@@ -359,8 +390,8 @@ public class ArticleService {
             if (sourceId != null) {
                 predicates.add(criteriaBuilder.equal(root.get("source").get("id"), sourceId));
             }
-            if (categoryId != null) {
-                predicates.add(criteriaBuilder.equal(root.get("category").get("id"), categoryId));
+            if (categoryIds != null && !categoryIds.isEmpty()) {
+                predicates.add(root.get("category").get("id").in(categoryIds));
             }
             if (publishedFrom != null) {
                 predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("publishedAt"), publishedFrom));
