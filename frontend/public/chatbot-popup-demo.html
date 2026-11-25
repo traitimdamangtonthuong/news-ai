@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>News AI — Chatbot popup demo</title>
+    <style>
+      :root {
+        color: #0f172a;
+        background: #f8fafc;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; }
+      button, input { font: inherit; }
+
+      .demo-page {
+        min-height: 100vh;
+        padding: 48px clamp(24px, 8vw, 140px);
+        background:
+          radial-gradient(circle at 90% 10%, rgba(96, 165, 250, .23), transparent 24rem),
+          #f8fafc;
+      }
+
+      .demo-brand { color: #2563eb; font-size: 13px; font-weight: 800; letter-spacing: .16em; }
+      h1 { max-width: 680px; margin: 12px 0; font-size: clamp(32px, 5vw, 56px); line-height: 1.07; letter-spacing: -.045em; }
+      .demo-page > p { max-width: 560px; color: #64748b; font-size: 17px; line-height: 1.65; }
+      .demo-content { display: grid; grid-template-columns: 1.45fr .85fr; gap: 24px; max-width: 1050px; margin-top: 54px; }
+      .demo-card { min-height: 155px; border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; box-shadow: 0 14px 35px rgba(15, 23, 42, .04); }
+      .demo-card:first-child { padding: 28px; }
+      .demo-card h2 { margin: 0 0 12px; font-size: 19px; }
+      .demo-card p { margin: 0; color: #64748b; line-height: 1.55; }
+      .demo-lines { display: grid; gap: 12px; padding: 30px 22px; }
+      .demo-line { height: 12px; border-radius: 999px; background: #e2e8f0; }
+      .demo-line:nth-child(2) { width: 80%; }
+      .demo-line:nth-child(3) { width: 62%; }
+
+      .chat-toggle {
+        position: fixed;
+        z-index: 20;
+        right: 24px;
+        bottom: 24px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: 0;
+        border-radius: 999px;
+        padding: 14px 18px 14px 15px;
+        background: #2563eb;
+        color: #fff;
+        box-shadow: 0 12px 30px rgba(37, 99, 235, .35);
+        cursor: pointer;
+        font-weight: 750;
+        transition: transform .2s ease, background .2s ease;
+      }
+      .chat-toggle:hover { background: #1d4ed8; transform: translateY(-2px); }
+      .chat-toggle svg { width: 22px; height: 22px; }
+      .chat-toggle .close-icon { display: none; }
+      .chat-toggle[aria-expanded="true"] .chat-icon { display: none; }
+      .chat-toggle[aria-expanded="true"] .close-icon { display: block; }
+      .chat-toggle[aria-expanded="true"] .toggle-label { display: none; }
+
+      .chat-popup {
+        position: fixed;
+        z-index: 19;
+        right: 24px;
+        bottom: 88px;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        width: min(390px, calc(100vw - 32px));
+        height: min(590px, calc(100vh - 124px));
+        overflow: hidden;
+        border: 1px solid #dbe4f0;
+        border-radius: 22px;
+        background: #fff;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, .22);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(16px) scale(.97);
+        transform-origin: bottom right;
+        transition: opacity .2s ease, transform .2s ease;
+      }
+      .chat-popup.is-open { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+
+      .chat-header {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 16px;
+        border-bottom: 1px solid #e2e8f0;
+        background: linear-gradient(120deg, #eff6ff, #fff);
+      }
+      .ai-mark { display: grid; width: 35px; height: 35px; place-items: center; border-radius: 11px; background: #2563eb; color: #fff; font-size: 12px; font-weight: 900; }
+      .chat-header h2 { margin: 0; font-size: 15px; }
+      .chat-header p { margin: 3px 0 0; color: #64748b; font-size: 12px; }
+      .online-status { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; color: #15803d; font-size: 11px; font-weight: 700; }
+      .online-status::before { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; content: ""; }
+
+      .messages { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: 18px 16px; background: #f8fafc; }
+      .message { display: flex; max-width: 92%; gap: 8px; align-items: flex-start; }
+      .message.user { align-self: flex-end; flex-direction: row-reverse; }
+      .message-avatar { display: grid; flex: 0 0 26px; width: 26px; height: 26px; place-items: center; border-radius: 8px; background: #dbeafe; color: #1d4ed8; font-size: 9px; font-weight: 900; }
+      .message.user .message-avatar { background: #e2e8f0; color: #475569; }
+      .message-body { border: 1px solid #e2e8f0; border-radius: 4px 13px 13px; padding: 10px 12px; background: #fff; color: #334155; font-size: 13px; line-height: 1.52; }
+      .message.user .message-body { border-color: #2563eb; border-radius: 13px 4px 13px 13px; background: #2563eb; color: #fff; }
+      .message-body p { margin: 0; white-space: pre-wrap; }
+      .sources { display: grid; gap: 6px; margin-top: 10px; padding-top: 9px; border-top: 1px solid #e2e8f0; }
+      .sources span { color: #64748b; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+      .sources a { color: #1d4ed8; font-size: 11px; font-weight: 650; text-decoration: none; }
+      .sources a:hover { text-decoration: underline; }
+      .typing { display: none; align-items: center; gap: 4px; width: fit-content; min-height: 42px; }
+      .typing.is-visible { display: flex; }
+      .typing i { width: 5px; height: 5px; border-radius: 50%; background: #94a3b8; animation: bounce 1s infinite ease-in-out; }
+      .typing i:nth-child(2) { animation-delay: .14s; }
+      .typing i:nth-child(3) { animation-delay: .28s; }
+      @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+
+      .composer { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #e2e8f0; background: #fff; }
+      .composer input { min-width: 0; flex: 1; border: 1px solid #cbd5e1; border-radius: 12px; padding: 10px 12px; outline: none; font-size: 13px; }
+      .composer input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+      .composer button { display: grid; width: 40px; flex: 0 0 40px; place-items: center; border: 0; border-radius: 12px; background: #2563eb; color: #fff; cursor: pointer; }
+      .composer button:disabled { cursor: not-allowed; opacity: .45; }
+
+      @media (max-width: 580px) {
+        .demo-page { padding: 38px 24px; }
+        .demo-content { grid-template-columns: 1fr; margin-top: 36px; }
+        .chat-popup { right: 16px; bottom: 82px; width: calc(100vw - 32px); height: min(580px, calc(100vh - 110px)); }
+        .chat-toggle { right: 16px; bottom: 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="demo-page">
+      <div class="demo-brand">NEWS AI / DESIGN DEMO</div>
+      <h1>Trợ lý tin tức luôn sẵn sàng ở mọi trang.</h1>
+      <p>Đây là bản demo độc lập của chatbot dạng popup. Người dùng vẫn đọc tin, tìm kiếm hoặc xem chi tiết bài viết mà không mất cuộc hội thoại.</p>
+      <section class="demo-content" aria-label="Nội dung trang minh họa">
+        <article class="demo-card"><h2>Tin mới nhất về công nghệ</h2><p>Cập nhật các bài báo đã được hệ thống tổng hợp. Popup chat nằm cố định ở góc phải dưới.</p></article>
+        <div class="demo-card demo-lines" aria-hidden="true"><div class="demo-line"></div><div class="demo-line"></div><div class="demo-line"></div></div>
+      </section>
+    </main>
+
+    <section class="chat-popup" id="chat-popup" aria-label="Trợ lý tin tức AI" aria-hidden="true">
+      <header class="chat-header">
+        <div class="ai-mark">AI</div>
+        <div><h2>Trợ lý Tin tức</h2><p>Hỏi về các bài báo đã crawl</p></div>
+        <span class="online-status">Trực tuyến</span>
+      </header>
+      <div class="messages" id="messages" aria-live="polite">
+        <article class="message"><div class="message-avatar">AI</div><div class="message-body"><p>Xin chào! Bạn muốn tìm hiểu điều gì trong các tin tức mới nhất?</p></div></article>
+        <article class="message user"><div class="message-avatar">Bạn</div><div class="message-body"><p>Tóm tắt tin về AI hôm nay.</p></div></article>
+        <article class="message"><div class="message-avatar">AI</div><div class="message-body"><p>Mình tìm thấy các bài viết về AI trong dữ liệu đã crawl. Các nội dung nổi bật tập trung vào ứng dụng AI và xu hướng công nghệ mới.</p><div class="sources"><span>Nguồn tham khảo</span><a href="#demo-source">VnExpress · Tin công nghệ mới nhất ↗</a></div></div></article>
+        <article class="message"><div class="message-avatar">AI</div><div class="message-body typing" id="typing"><i></i><i></i><i></i></div></article>
+      </div>
+      <form class="composer" id="chat-form">
+        <label for="question" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Câu hỏi cho chatbot</label>
+        <input id="question" autocomplete="off" placeholder="Hỏi AI về tin tức..." />
+        <button id="send" aria-label="Gửi câu hỏi" type="submit">↑</button>
+      </form>
+    </section>
+
+    <button class="chat-toggle" id="chat-toggle" aria-controls="chat-popup" aria-expanded="false" type="button">
+      <svg class="chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.7 9.7 0 0 1-4.4-1L3 20l1.2-3.7A8.5 8.5 0 1 1 21 11.5Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
+      <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      <span class="toggle-label">Hỏi AI</span>
+    </button>
+
+    <script>
+      const popup = document.querySelector('#chat-popup');
+      const toggle = document.querySelector('#chat-toggle');
+      const form = document.querySelector('#chat-form');
+      const input = document.querySelector('#question');
+      const messages = document.querySelector('#messages');
+      const typing = document.querySelector('#typing');
+
+      function setOpen(open) {
+        popup.classList.toggle('is-open', open);
+        popup.setAttribute('aria-hidden', String(!open));
+        toggle.setAttribute('aria-expanded', String(open));
+        if (open) input.focus();
+      }
+
+      toggle.addEventListener('click', () => setOpen(!popup.classList.contains('is-open')));
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const question = input.value.trim();
+        if (!question) return;
+        messages.insertAdjacentHTML('beforeend', `<article class="message user"><div class="message-avatar">Bạn</div><div class="message-body"><p></p></div></article>`);
+        messages.lastElementChild.querySelector('p').textContent = question;
+        input.value = '';
+        typing.classList.add('is-visible');
+        messages.scrollTop = messages.scrollHeight;
+        window.setTimeout(() => {
+          typing.classList.remove('is-visible');
+          messages.insertAdjacentHTML('beforeend', `<article class="message"><div class="message-avatar">AI</div><div class="message-body"><p>Đây là phản hồi minh họa. Khi triển khai, popup sẽ gửi câu hỏi tới <code>/api/chat</code> của ai-chatbot và hiển thị câu trả lời kèm nguồn.</p></div></article>`);
+          messages.scrollTop = messages.scrollHeight;
+        }, 900);
+      });
+    </script>
+  </body>
+</html>

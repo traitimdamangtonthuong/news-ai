@@ -1,6 +1,5 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { Search, Menu } from 'lucide-react';
-import ChatbotWidget from './ChatbotWidget.tsx';
 import { useState } from 'react';
 
 export default function Layout() {
@@ -45,8 +44,6 @@ export default function Layout() {
       <footer className="bg-slate-900 text-slate-400 py-8 text-center text-sm">
         <p>© 2026 News AI Platform. Developed for Advanced AI News Aggregation.</p>
       </footer>
-
-      <ChatbotWidget />
     </div>
   );
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>Tech News</title>
+        <link>https://technews.example.com</link>
+        <item>
+            <title>Spring Boot 4.1.1 Released</title>
+            <link>https://technews.example.com/spring-boot-release?utm_source=rss</link>
+            <description>Bản cập nhật mới nhất hỗ trợ Java 25.</description>
+            <pubDate>Mon, 21 Sep 2026 10:00:00 GMT</pubDate>
+            <dc:subject>Java</dc:subject>
+        </item>
+    </channel>
+</rss>

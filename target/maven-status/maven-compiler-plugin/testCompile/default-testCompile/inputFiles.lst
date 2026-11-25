@@ -1,0 +1,11 @@
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\article\ArticleServiceCrawlUpsertTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\article\ArticleServiceSearchTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\crawler\ArticlePageScraperTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\crawler\ArticleUrlNormalizerTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\crawler\CrawlControllerTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\crawler\CrawlerEndToEndTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\crawler\FeedItemMapperTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\crawler\FixtureProbeTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\crawler\RssCategoryResolverTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\crawler\RssCrawlerServiceTest.java
+D:\PRJ\news-ai\src\test\java\com\newsai\news_ai\NewsAiApplicationTests.java

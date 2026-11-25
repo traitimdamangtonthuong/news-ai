@@ -1,27 +1,105 @@
+import type { FormEvent } from "react";
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { NewsAPI } from '../api/client';
+import { getCategories, type Category } from "../api/articles";
+import Navbar from "../components/Navbar";
 import type { Article } from '../types';
-import { Clock, ExternalLink, ArrowLeft, Loader2, Sparkles, AlertCircle, Flame } from 'lucide-react';
+import { Clock, ExternalLink, ArrowLeft, Loader2, Sparkles, AlertCircle, Newspaper } from 'lucide-react';
+
+type ArticlePageNavigationProps = {
+  categories: Category[];
+  keyword: string;
+  onKeywordChange: (keyword: string) => void;
+  onSearch: (event: FormEvent<HTMLFormElement>) => void;
+  onSelectCategory: (categoryId: string) => void;
+};
+
+function ArticlePageNavigation({
+  categories,
+  keyword,
+  onKeywordChange,
+  onSearch,
+  onSelectCategory,
+}: ArticlePageNavigationProps) {
+  return (
+    <header className="article-page-navigation">
+      <div className="news-page article-page-navigation-inner">
+        <div className="news-header">
+          <div className="header-top">
+            <div className="brand-section">
+              <p className="eyebrow">NEWS AI</p>
+              <h1>Tin tức mới nhất</h1>
+              <p className="subtitle">Tổng hợp tin tức tự động và đa chiều từ các nguồn báo uy tín.</p>
+            </div>
+
+            <form className="search-form" onSubmit={onSearch}>
+              <input
+                aria-label="Từ khóa tìm kiếm"
+                onChange={(event) => onKeywordChange(event.target.value)}
+                placeholder="Tìm kiếm từ khóa..."
+                value={keyword}
+              />
+              <button type="submit">Tìm kiếm</button>
+            </form>
+          </div>
+
+          <Navbar
+            categories={categories}
+            onSelectCategory={onSelectCategory}
+            selectedCategory=""
+          />
+        </div>
+      </div>
+    </header>
+  );
+}
 
 export default function ArticleDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [article, setArticle] = useState<Article | null>(null);
-  const [topArticles, setTopArticles] = useState<Article[]>([]);
+  const [similarArticles, setSimilarArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [headerKeyword, setHeaderKeyword] = useState("");
+
+  useEffect(() => {
+    getCategories()
+      .then(setCategories)
+      .catch((requestError: unknown) => console.error("Lỗi tải danh mục:", requestError));
+  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     if (id) {
       setLoading(true);
-      Promise.all([
-        NewsAPI.getArticle(Number(id)),
-        NewsAPI.searchArticles({ page: 0, size: 6 })
-      ])
-        .then(([articleData, searchData]) => {
+      NewsAPI.getArticle(Number(id))
+        .then(async (articleData) => {
           setArticle(articleData);
-          setTopArticles(searchData.items.filter((item: Article) => item.id !== Number(id)));
+          
+          // Tìm tin tương tự theo category của bài viết nếu có, fallback về tin mới nhất
+          try {
+            const categoryId = articleData.category?.id;
+            const searchData = await NewsAPI.searchArticles({
+              categoryId: categoryId ? Number(categoryId) : undefined,
+              page: 0,
+              size: 8,
+            });
+            const filtered = (searchData.items || []).filter((item: Article) => item.id !== Number(id));
+            if (filtered.length >= 3) {
+              setSimilarArticles(filtered.slice(0, 6));
+            } else {
+              // Nếu category có ít bài, lấy thêm các tin mới khác
+              const fallbackData = await NewsAPI.searchArticles({ page: 0, size: 8 });
+              const fallbackFiltered = (fallbackData.items || []).filter((item: Article) => item.id !== Number(id));
+              setSimilarArticles(fallbackFiltered.slice(0, 6));
+            }
+          } catch {
+            setSimilarArticles([]);
+          }
+
           setLoading(false);
         })
         .catch((err) => {
@@ -32,39 +110,88 @@ export default function ArticleDetail() {
     }
   }, [id]);
 
+  function openFilteredNews(params: URLSearchParams) {
+    const query = params.toString();
+    navigate(query ? `/?${query}` : "/");
+  }
+
+  function handleHeaderSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    if (headerKeyword.trim()) {
+      params.set("keyword", headerKeyword.trim());
+    }
+    openFilteredNews(params);
+  }
+
+  function handleCategoryNavigation(categoryId: string) {
+    const params = new URLSearchParams();
+    if (categoryId) {
+      params.set("categoryId", categoryId);
+    }
+    openFilteredNews(params);
+  }
+
+  const navigation = (
+    <ArticlePageNavigation
+      categories={categories}
+      keyword={headerKeyword}
+      onKeywordChange={setHeaderKeyword}
+      onSearch={handleHeaderSearch}
+      onSelectCategory={handleCategoryNavigation}
+    />
+  );
+
   if (loading) {
     return (
-      <div className="article-detail-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#2563eb', width: '36px', height: '36px' }} />
-        <p style={{ fontSize: '14px', fontWeight: 500, color: '#64748b', marginTop: '12px' }}>Đang tải nội dung bài báo...</p>
-      </div>
+      <>
+        {navigation}
+        <div className="article-detail-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#2563eb', width: '36px', height: '36px' }} />
+          <p style={{ fontSize: '14px', fontWeight: 500, color: '#64748b', marginTop: '12px' }}>Đang tải nội dung bài báo...</p>
+        </div>
+      </>
     );
   }
 
   if (error || !article) {
     return (
-      <div className="article-detail-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ maxWidth: '400px', width: '100%', padding: '32px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '24px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-          <AlertCircle style={{ width: '40px', height: '40px', margin: '0 auto 12px', color: '#ef4444' }} />
-          <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>Không tìm thấy bài viết</h3>
-          <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px' }}>{error || 'Bài viết không tồn tại hoặc đã bị xóa.'}</p>
-          <Link to="/" className="article-back-btn" style={{ width: '100%', justifyContent: 'center', background: '#2563eb', color: 'white' }}>
-            <ArrowLeft size={16} /> Quay lại bảng tin
-          </Link>
+      <>
+        {navigation}
+        <div className="article-detail-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ maxWidth: '400px', width: '100%', padding: '32px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '24px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+            <AlertCircle style={{ width: '40px', height: '40px', margin: '0 auto 12px', color: '#ef4444' }} />
+            <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a', marginBottom: '8px' }}>Không tìm thấy bài viết</h3>
+            <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '24px' }}>{error || 'Bài viết không tồn tại hoặc đã bị xóa.'}</p>
+            <button 
+              type="button" 
+              onClick={() => navigate(-1)} 
+              className="article-back-btn" 
+              style={{ width: '100%', justifyContent: 'center', background: '#2563eb', color: 'white' }}
+            >
+              <ArrowLeft size={16} /> Quay lại
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="article-detail-wrapper">
+    <>
+      {navigation}
+      <div className="article-detail-wrapper">
       <div className="article-detail-container">
         
         {/* Nút quay lại */}
         <div className="article-back-bar">
-          <Link to="/" className="article-back-btn">
-            <ArrowLeft size={16} /> Quay lại bảng tin
-          </Link>
+          <button 
+            type="button" 
+            onClick={() => navigate(-1)} 
+            className="article-back-btn"
+          >
+            <ArrowLeft size={16} /> Quay lại
+          </button>
         </div>
 
         {/* Bố cục 2 cột chuẩn báo chí */}
@@ -134,17 +261,17 @@ export default function ArticleDetail() {
             />
           </main>
 
-          {/* CỘT PHẢI: Sidebar Xem nhiều */}
+          {/* CỘT PHẢI: Sidebar Tin tương tự */}
           <aside className="article-sidebar-card">
             <div className="sidebar-heading-row">
-              <div className="sidebar-heading-icon">
-                <Flame size={18} />
+              <div className="sidebar-heading-icon" style={{ backgroundColor: '#eff6ff', color: '#2563eb' }}>
+                <Newspaper size={18} />
               </div>
-              <h2 style={{ fontWeight: 800, color: '#0f172a', fontSize: '16px', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Xem nhiều</h2>
+              <h2 style={{ fontWeight: 800, color: '#0f172a', fontSize: '16px', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Tin tương tự</h2>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {topArticles.map((item, index) => (
+              {similarArticles.map((item, index) => (
                 <Link 
                   to={`/article/${item.id}`} 
                   key={item.id}
@@ -168,6 +295,7 @@ export default function ArticleDetail() {
 
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

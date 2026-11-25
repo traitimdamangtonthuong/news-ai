@@ -77,23 +77,23 @@ public class ChatHttpServer {
             return;
         }
 
-        String question;
+        ChatRequestDto req;
         try (InputStream body = exchange.getRequestBody()) {
             byte[] raw = body.readAllBytes();
-            ChatRequestDto req = mapper.readValue(raw, ChatRequestDto.class);
-            question = req.question();
+            req = mapper.readValue(raw, ChatRequestDto.class);
         } catch (Exception e) {
             sendJson(exchange, 400, new ChatAnswer("Body JSON khong hop le. Vi du dung: {\"question\": \"AI co gi moi\"}", List.of()));
             return;
         }
 
+        String question = req.question();
         if (question == null || question.isBlank()) {
             sendJson(exchange, 400, new ChatAnswer("Cau hoi dang trong.", List.of()));
             return;
         }
 
         try {
-            ChatAnswer answer = chatbotService.answer(question);
+            ChatAnswer answer = chatbotService.answer(question, req.articleId());
             sendJson(exchange, 200, answer);
         } catch (NewsApiException e) {
             sendJson(exchange, 200, new ChatAnswer("Loi khi goi backend: " + e.getMessage(), List.of()));

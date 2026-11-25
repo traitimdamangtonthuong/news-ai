@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   getCategories,
   searchArticles,
@@ -11,117 +12,171 @@ import type { ArticleSearchResponse } from "../types/articles";
 
 const PAGE_SIZE = 12;
 
-interface NewsPageProps {
-  initialCategory?: string;
+type NewsPageProps = {
   onOpenArticle: (id: number) => void;
-}
+  onOpenChat: () => void;
+};
 
-export default function NewsPage({
-  initialCategory = "",
-  onOpenArticle,
-}: NewsPageProps) {
-  const [inputKeyword, setInputKeyword] = useState("");
-  const [keyword, setKeyword] = useState("");
+export default function NewsPage({ onOpenArticle, onOpenChat }: NewsPageProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlKeyword = searchParams.get("keyword") ?? "";
+  const urlCategory = searchParams.get("categoryId") ?? "";
+  const urlPageRaw = searchParams.get("page");
+  const urlPage = urlPageRaw ? Math.max(0, parseInt(urlPageRaw, 10) - 1) : 0;
 
+  const [inputKeyword, setInputKeyword] = useState(urlKeyword);
+  const [keyword, setKeyword] = useState(urlKeyword);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
-
-  const [publishedFrom, setPublishedFrom] = useState<string>("");
-  const [publishedTo, setPublishedTo] = useState<string>("");
-
-  const [page, setPage] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState(urlCategory);
+  const [publishedFrom, setPublishedFrom] = useState(searchParams.get("from") ?? "");
+  const [publishedTo, setPublishedTo] = useState(searchParams.get("to") ?? "");
+  const [page, setPage] = useState(urlPage);
   const [data, setData] = useState<ArticleSearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (initialCategory) {
-      setSelectedCategory(initialCategory);
-    }
-  }, [initialCategory]);
+    getCategories()
+      .then(setCategories)
+      .catch((requestError: unknown) => {
+        console.error("Lỗi tải danh mục:", requestError);
+      });
+  }, []);
+
+  // Đồng bộ state khi URL thay đổi (ví dụ khi nhấn Back/Forward trên trình duyệt)
+  useEffect(() => {
+    setInputKeyword(urlKeyword);
+    setKeyword(urlKeyword);
+    setSelectedCategory(urlCategory);
+    setPage(urlPage);
+  }, [urlCategory, urlKeyword, urlPageRaw]);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-    if (id) {
-      setLoading(true);
-      Promise.all([
-        NewsAPI.getArticle(Number(id)),
-        NewsAPI.searchArticles({ page: 0, size: 6 })
-      ])
-        .then(([articleData, searchData]) => {
-          setArticle(articleData);
-          setTopArticles(searchData.items.filter((item: Article) => item.id !== Number(id)));
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Lỗi lấy chi tiết bài báo:", err);
-          setError('Không thể tải nội dung bài viết.');
-          setLoading(false);
+    async function loadArticles() {
+      try {
+        setLoading(true);
+        setError("");
+        const result = await searchArticles({
+          keyword,
+          categoryId: selectedCategory ? Number(selectedCategory) : undefined,
+          publishedFrom: publishedFrom || undefined,
+          publishedTo: publishedTo || undefined,
+          page,
+          size: PAGE_SIZE,
         });
+        setData(result);
+      } catch (requestError) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : "Đã có lỗi không xác định.",
+        );
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [id]);
 
-  if (loading) {
-    return (
-      <div className="article-detail-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#2563eb', width: '36px', height: '36px' }} />
-        <p style={{ fontSize: '14px', fontWeight: 500, color: '#64748b', marginTop: '12px' }}>Đang tải nội dung bài báo...</p>
-      </div>
-    );
+    void loadArticles();
+  }, [keyword, selectedCategory, publishedFrom, publishedTo, page]);
+
+  function updateUrl(newParams: { keyword?: string; categoryId?: string; page?: number; from?: string; to?: string }) {
+    const params = new URLSearchParams();
+    const kw = newParams.keyword !== undefined ? newParams.keyword : keyword;
+    const cat = newParams.categoryId !== undefined ? newParams.categoryId : selectedCategory;
+    const p = newParams.page !== undefined ? newParams.page : page;
+    const f = newParams.from !== undefined ? newParams.from : publishedFrom;
+    const t = newParams.to !== undefined ? newParams.to : publishedTo;
+
+    if (kw.trim()) params.set("keyword", kw.trim());
+    if (cat) params.set("categoryId", cat);
+    if (p > 0) params.set("page", String(p + 1));
+    if (f) params.set("from", f);
+    if (t) params.set("to", t);
+
+    setSearchParams(params);
+  }
+
+  function handleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPage(0);
+    setKeyword(inputKeyword);
+    updateUrl({ keyword: inputKeyword, page: 0 });
+  }
+
+  function handleSelectCategory(categoryId: string) {
+    setSelectedCategory(categoryId);
+    setPage(0);
+    updateUrl({ categoryId, page: 0 });
   }
 
   return (
-    <div className="article-detail-wrapper">
-      <div className="article-detail-container">
-        
-        {/* Nút quay lại */}
-        <div className="article-back-bar">
-          <Link to="/" className="article-back-btn">
-            <ArrowLeft size={16} /> Quay lại bảng tin
-          </Link>
+    <main className="news-page">
+      <header className="news-header">
+        <div className="header-top">
+          <div className="brand-section">
+            <p className="eyebrow">NEWS AI</p>
+            <h1>Tin tức mới nhất</h1>
+            <p className="subtitle">
+              Tổng hợp tin tức tự động và đa chiều từ các nguồn báo uy tín.
+            </p>
+          </div>
+
+          <button className="open-chat-button" onClick={onOpenChat} type="button">
+            <span aria-hidden="true">✦</span>
+            Hỏi AI
+          </button>
+
+          <form className="search-form" onSubmit={handleSearch}>
+            <input
+              aria-label="Từ khóa tìm kiếm"
+              onChange={(event) => setInputKeyword(event.target.value)}
+              placeholder="Tìm kiếm từ khóa..."
+              value={inputKeyword}
+            />
+            <button type="submit">Tìm kiếm</button>
+          </form>
         </div>
 
-        {/* Bố cục 2 cột chuẩn báo chí */}
-        <div className="article-main-grid">
-          
-          {/* CỘT TRÁI: Nội dung chính */}
-          <main className="article-content-card">
-            
-            <header className="article-header-section">
-              <div className="article-meta-tags">
-                <span className="article-cat-badge">
-                  {article.category?.name || 'Tin tức'}
-                </span>
-                <span style={{ color: '#cbd5e1' }}>•</span>
-                <span className="article-source-name">{article.source?.name}</span>
-              </div>
+        <Navbar
+          categories={categories}
+          onSelectCategory={handleSelectCategory}
+          selectedCategory={selectedCategory}
+        />
 
-              <h1 className="article-title-main">
-                {article.title}
-              </h1>
-
-              <p className="article-desc-lead">
-                {article.description}
-              </p>
-
-              <div className="article-info-bar">
-                <div className="article-date-box">
-                  <Clock size={16} style={{ color: '#2563eb' }} />
-                  <span>Đăng ngày: {article.publishedAt ? new Date(article.publishedAt).toLocaleString('vi-VN') : 'Hôm nay'}</span>
-                </div>
-
-                {article.url && (
-                  <a 
-                    href={article.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="article-original-link"
-                  >
-                    Xem bài gốc <ExternalLink size={14} />
-                  </a>
-                )}
-              </div>
-            </header>
+        <div className="sub-filter-row">
+          <div className="date-filter-group">
+            <span className="filter-label">Thời gian:</span>
+            <div className="date-input-wrap">
+              <label htmlFor="from-date">Từ</label>
+              <input
+                id="from-date"
+                onChange={(event) => {
+                  const val = event.target.value;
+                  setPublishedFrom(val);
+                  setPage(0);
+                  updateUrl({ from: val, page: 0 });
+                }}
+                type="date"
+                value={publishedFrom}
+              />
+            </div>
+            <div className="date-input-wrap">
+              <label htmlFor="to-date">Đến</label>
+              <input
+                id="to-date"
+                onChange={(event) => {
+                  const val = event.target.value;
+                  setPublishedTo(val);
+                  setPage(0);
+                  updateUrl({ to: val, page: 0 });
+                }}
+                type="date"
+                value={publishedTo}
+              />
+            </div>
+          </div>
+        </div>
+      </header>
 
       {loading && <p className="status">Đang tải bài viết...</p>}
 
@@ -132,9 +187,7 @@ export default function NewsPage({
       )}
 
       {!loading && !error && data?.items.length === 0 && (
-        <p className="status">
-          Không tìm thấy bài viết phù hợp với bộ lọc hiện tại.
-        </p>
+        <p className="status">Không tìm thấy bài viết phù hợp với bộ lọc hiện tại.</p>
       )}
 
       {!loading && !error && data && data.items.length > 0 && (
@@ -143,11 +196,8 @@ export default function NewsPage({
 
           <section className="article-grid">
             {data.items.map((article) => {
-              const cardImage =
-                article.imageUrl ?? extractFirstImageUrl(article.description);
-              const lead =
-                stripHtmlToText(article.description) ??
-                "Bài viết chưa có phần mô tả.";
+              const cardImage = article.imageUrl ?? extractFirstImageUrl(article.description);
+              const lead = stripHtmlToText(article.description) ?? "Bài viết chưa có phần mô tả.";
 
               return (
                 <article
@@ -156,46 +206,60 @@ export default function NewsPage({
                   onClick={() => onOpenArticle(article.id)}
                 >
                   {cardImage ? (
-                    <img src={cardImage} alt="" loading="lazy" />
+                    <img alt="" loading="lazy" src={cardImage} />
                   ) : (
                     <div className="image-placeholder">NEWS</div>
                   )}
 
                   <div className="article-body">
                     <div className="article-meta">
-                      <span className="source-tag">
-                        {article.source.name}
-                      </span>
+                      <span className="source-tag">{article.source.name}</span>
                       {article.category && (
-                        <span className="category-tag">
-                          {article.category.name}
-                        </span>
+                        <span className="category-tag">{article.category.name}</span>
                       )}
                     </div>
 
-                    <h2
-                      className="article-title"
-                      title="Bấm để đọc nội dung bài viết"
-                    >
-                      {article.title}
-                    </h2>
+                    <h2 className="article-title">{article.title}</h2>
                     <p>{lead}</p>
 
                     {article.publishedAt && (
                       <time dateTime={article.publishedAt}>
-                        {new Date(article.publishedAt).toLocaleDateString(
-                          "vi-VN",
-                        )}
+                        {new Date(article.publishedAt).toLocaleDateString("vi-VN")}
                       </time>
                     )}
                   </div>
-                </Link>
-              ))}
-            </div>
-          </aside>
+                </article>
+              );
+            })}
+          </section>
 
-        </div>
-      </div>
-    </div>
+          <nav aria-label="Phân trang" className="pagination">
+            <button
+              disabled={page === 0}
+              onClick={() => {
+                const newPage = Math.max(0, page - 1);
+                setPage(newPage);
+                updateUrl({ page: newPage });
+              }}
+              type="button"
+            >
+              Trang trước
+            </button>
+            <span>Trang {data.page + 1} / {Math.max(1, data.totalPages)}</span>
+            <button
+              disabled={data.page + 1 >= data.totalPages}
+              onClick={() => {
+                const newPage = page + 1;
+                setPage(newPage);
+                updateUrl({ page: newPage });
+              }}
+              type="button"
+            >
+              Trang sau
+            </button>
+          </nav>
+        </>
+      )}
+    </main>
   );
 }
